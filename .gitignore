@@ -3,6 +3,8 @@ cv.md
 data/applications.md
 data/pipeline.md
 data/scan-history.tsv
+data/investors.yml
+.remote-only-note.md
 reports/*.md
 !reports/.gitkeep
 output/*
@@ -45,3 +47,12 @@ bun.lock
 .claude/memory/
 career-dashboard
 package-lock.json
+
+# Go build artifacts
+dashboard/dashboard.exe
+dashboard/dashboard.exe-go-tmp-umask
+dashboard/*.exe
+webui/webui.exe
+webui/webui.exe-go-tmp-umask
+webui/*.exe
+*.exe-go-tmp-umask
