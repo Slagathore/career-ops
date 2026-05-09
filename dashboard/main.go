@@ -21,12 +21,14 @@ const (
 	viewPipeline viewState = iota
 	viewReport
 	viewProgress
+	viewInvestors
 )
 
 type appModel struct {
 	pipeline        screens.PipelineModel
 	viewer          screens.ViewerModel
 	progress        screens.ProgressModel
+	investors       screens.InvestorModel
 	state           viewState
 	careerOpsPath   string
 	theme           theme.Theme
@@ -44,6 +46,24 @@ func (m appModel) Init() tea.Cmd {
 	return nil
 }
 
+func openURL(url string) tea.Cmd {
+	return func() tea.Msg {
+		var cmd *exec.Cmd
+		switch runtime.GOOS {
+		case "darwin":
+			cmd = exec.Command("open", url)
+		case "linux":
+			cmd = exec.Command("xdg-open", url)
+		case "windows":
+			cmd = exec.Command("cmd", "/c", "start", "", url)
+		default:
+			cmd = exec.Command("xdg-open", url)
+		}
+		_ = cmd.Run()
+		return nil
+	}
+}
+
 func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -53,6 +73,9 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if m.state == viewProgress {
 			m.progress.Resize(msg.Width, msg.Height)
+		}
+		if m.state == viewInvestors {
+			m.investors.Resize(msg.Width, msg.Height)
 		}
 		pm, cmd := m.pipeline.Update(msg)
 		m.pipeline = pm
@@ -69,7 +92,6 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case screens.PipelineUpdateStatusMsg:
 		err := data.UpdateApplicationStatus(msg.CareerOpsPath, msg.App, msg.NewStatus)
 		if err != nil {
-			// Log the error but still reload data to keep UI consistent
 			fmt.Fprintf(os.Stderr, "WARN: status update failed: %v\n", err)
 		}
 		m.reloadPipelineData()
@@ -105,23 +127,29 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.state = viewPipeline
 		return m, nil
 
-	case screens.PipelineOpenURLMsg:
-		url := msg.URL
-		return m, func() tea.Msg {
-			var cmd *exec.Cmd
-			switch runtime.GOOS {
-			case "darwin":
-				cmd = exec.Command("open", url)
-			case "linux":
-				cmd = exec.Command("xdg-open", url)
-			case "windows":
-				cmd = exec.Command("cmd", "/c", "start", "", url)
-			default:
-				cmd = exec.Command("xdg-open", url)
-			}
-			_ = cmd.Run()
-			return nil
+	case screens.PipelineOpenInvestorsMsg:
+		investors := data.ParseInvestors(m.careerOpsPath)
+		if investors == nil {
+			investors = []model.Investor{}
 		}
+		metrics := data.ComputeInvestorMetrics(investors)
+		m.investors = screens.NewInvestorModel(
+			m.theme, investors, metrics,
+			m.careerOpsPath,
+			m.pipeline.Width(), m.pipeline.Height(),
+		)
+		m.state = viewInvestors
+		return m, nil
+
+	case screens.InvestorsClosedMsg:
+		m.state = viewPipeline
+		return m, nil
+
+	case screens.InvestorsOpenURLMsg:
+		return m, openURL(msg.URL)
+
+	case screens.PipelineOpenURLMsg:
+		return m, openURL(msg.URL)
 
 	default:
 		if m.state == viewReport {
@@ -132,6 +160,11 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.state == viewProgress {
 			pg, cmd := m.progress.Update(msg)
 			m.progress = pg
+			return m, cmd
+		}
+		if m.state == viewInvestors {
+			iv, cmd := m.investors.Update(msg)
+			m.investors = iv
 			return m, cmd
 		}
 		pm, cmd := m.pipeline.Update(msg)
@@ -146,6 +179,8 @@ func (m appModel) View() string {
 		return m.viewer.View()
 	case viewProgress:
 		return m.progress.View()
+	case viewInvestors:
+		return m.investors.View()
 	default:
 		return m.pipeline.View()
 	}
@@ -160,7 +195,7 @@ func main() {
 	// Load applications
 	apps := data.ParseApplications(careerOpsPath)
 	if apps == nil {
-		fmt.Fprintf(os.Stderr, "Error: could not find applications.md in %s or %s/data/\n", careerOpsPath, careerOpsPath)
+		fmt.Fprintf(os.Stderr, "Error: could not find pipeline.md in %s or %s/data/\n", careerOpsPath, careerOpsPath)
 		os.Exit(1)
 	}
 

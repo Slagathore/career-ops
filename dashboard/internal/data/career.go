@@ -1,6 +1,7 @@
 package data
 
 import (
+	"math"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -26,14 +27,14 @@ var (
 	reBatchID        = regexp.MustCompile(`(?m)^\*\*Batch ID:\*\*\s*(\d+)`)
 )
 
-// ParseApplications reads applications.md and returns parsed applications.
-// It tries both {path}/applications.md and {path}/data/applications.md for compatibility.
+// ParseApplications reads pipeline.md and returns parsed applications.
+// It tries both {path}/pipeline.md and {path}/data/pipeline.md for compatibility.
 func ParseApplications(careerOpsPath string) []model.CareerApplication {
-	filePath := filepath.Join(careerOpsPath, "applications.md")
+	filePath := filepath.Join(careerOpsPath, "pipeline.md")
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		// Fallback: try data/ subdirectory
-		filePath = filepath.Join(careerOpsPath, "data", "applications.md")
+		filePath = filepath.Join(careerOpsPath, "data", "pipeline.md")
 		content, err = os.ReadFile(filePath)
 		if err != nil {
 			return nil
@@ -107,6 +108,7 @@ func ParseApplications(careerOpsPath string) []model.CareerApplication {
 			app.Notes = fields[8]
 		}
 
+		app.JobType = ClassifyJobType(app.Role)
 		apps = append(apps, app)
 	}
 
@@ -503,6 +505,56 @@ func NormalizeStatus(raw string) string {
 	}
 }
 
+// ClassifyJobType infers a role archetype from the job title.
+func ClassifyJobType(role string) string {
+	r := strings.ToLower(role)
+	// FAS / Application Scientist (check before generic "scientist")
+	if anyContains(r, "field application", "applications scientist", "application specialist",
+		"applications specialist", "field scientist", "instrument specialist", "laboratory specialist",
+		"technical sales", "scientific sales", "solutions specialist") {
+		return "fas"
+	}
+	// TAM / Customer Success / Solutions Engineer
+	if anyContains(r, "technical account", "customer success", "customer engineer",
+		"implementation engineer", "account manager", "solutions engineer") {
+		return "tam"
+	}
+	// Gaming
+	if anyContains(r, "game ", "gaming", "unreal", "gameplay", "game designer", "game dev") {
+		return "gaming"
+	}
+	// DevRel
+	if anyContains(r, "developer relation", "devrel", "developer advocate", "developer evangelist") {
+		return "devrel"
+	}
+	// AI / ML
+	if anyContains(r, "ai engineer", "ml engineer", "machine learning", "deep learning",
+		"llm", "prompt engineer", "artificial intelligence", "nlp", " ai ", "language model") {
+		return "aiml"
+	}
+	// SWE / Backend
+	if anyContains(r, "software engineer", "backend engineer", "full stack", "fullstack",
+		"platform engineer", "frontend engineer", "sre ", "site reliability") {
+		return "swe"
+	}
+	// Lab / Chemistry
+	if anyContains(r, "chemist", "analytical", "lims", "lab informatics", "scientific software",
+		"scientist") {
+		return "lab"
+	}
+	return ""
+}
+
+// anyContains returns true if s contains any of the given substrings.
+func anyContains(s string, keywords ...string) bool {
+	for _, kw := range keywords {
+		if strings.Contains(s, kw) {
+			return true
+		}
+	}
+	return false
+}
+
 // LoadReportSummary extracts key fields from a report file.
 func LoadReportSummary(careerOpsPath, reportPath string) (archetype, tldr, remote, comp string) {
 	fullPath := filepath.Join(careerOpsPath, reportPath)
@@ -541,12 +593,12 @@ func LoadReportSummary(careerOpsPath, reportPath string) (archetype, tldr, remot
 	return
 }
 
-// UpdateApplicationStatus updates the status of an application in applications.md.
+// UpdateApplicationStatus updates the status of an application in pipeline.md.
 func UpdateApplicationStatus(careerOpsPath string, app model.CareerApplication, newStatus string) error {
-	filePath := filepath.Join(careerOpsPath, "applications.md")
+	filePath := filepath.Join(careerOpsPath, "pipeline.md")
 	content, err := os.ReadFile(filePath)
 	if err != nil {
-		filePath = filepath.Join(careerOpsPath, "data", "applications.md")
+		filePath = filepath.Join(careerOpsPath, "data", "pipeline.md")
 		content, err = os.ReadFile(filePath)
 		if err != nil {
 			return err
@@ -731,10 +783,10 @@ func ComputeProgressMetrics(apps []model.CareerApplication) model.ProgressMetric
 	return pm
 }
 
-// safePct returns the percentage of part/whole, or 0 if whole is 0.
+
 func safePct(part, whole int) float64 {
 	if whole == 0 {
 		return 0
 	}
-	return float64(part) / float64(whole) * 100
+	return math.Round(float64(part)/float64(whole)*1000) / 10
 }

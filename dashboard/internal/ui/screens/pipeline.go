@@ -48,6 +48,9 @@ type PipelineRefreshMsg struct{}
 // PipelineOpenProgressMsg is emitted when the progress screen should open.
 type PipelineOpenProgressMsg struct{}
 
+// PipelineOpenInvestorsMsg is emitted when the investor screen should open.
+type PipelineOpenInvestorsMsg struct{}
+
 type reportSummary struct {
 	archetype string
 	tldr      string
@@ -98,6 +101,31 @@ var statusOptions = []string{"Evaluated", "Applied", "Responded", "Interview", "
 // statusGroupOrder defines display order for grouped view.
 var statusGroupOrder = []string{"interview", "offer", "responded", "applied", "evaluated", "skip", "rejected", "discarded"}
 
+// Job type secondary filter constants.
+const (
+	jobTypeAll    = ""
+	jobTypeFAS    = "fas"
+	jobTypeTAM    = "tam"
+	jobTypeAIML   = "aiml"
+	jobTypeSWE    = "swe"
+	jobTypeDevRel = "devrel"
+	jobTypeGaming = "gaming"
+	jobTypeLab    = "lab"
+)
+
+var jobTypeCycle = []string{"", "fas", "tam", "aiml", "swe", "devrel", "gaming", "lab"}
+
+var jobTypeLabels = map[string]string{
+	"":        "ALL TYPES",
+	"fas":     "FAS/AppSci",
+	"tam":     "TAM/CSE",
+	"aiml":    "AI+ML",
+	"swe":     "SWE",
+	"devrel":  "DevRel",
+	"gaming":  "Gaming",
+	"lab":     "Lab/Chem",
+}
+
 // PipelineModel implements the career pipeline dashboard screen.
 type PipelineModel struct {
 	apps          []model.CareerApplication
@@ -115,6 +143,12 @@ type PipelineModel struct {
 	// Status picker sub-state
 	statusPicker bool
 	statusCursor int
+	// Job type secondary filter
+	jobTypeFilter string
+	// Multi-select & bulk actions
+	selected   map[int]bool // keyed by app.Number
+	bulkPicker bool
+	bulkCursor int
 }
 
 // NewPipelineModel creates a new pipeline screen.
@@ -130,6 +164,7 @@ func NewPipelineModel(t theme.Theme, apps []model.CareerApplication, metrics mod
 		theme:         t,
 		careerOpsPath: careerOpsPath,
 		reportCache:   make(map[string]reportSummary),
+		selected:      make(map[int]bool),
 	}
 	m.applyFilterAndSort()
 	return m
@@ -185,6 +220,8 @@ func (m PipelineModel) WithReloadedData(apps []model.CareerApplication, metrics 
 	reloaded.sortMode = m.sortMode
 	reloaded.activeTab = m.activeTab
 	reloaded.viewMode = m.viewMode
+	reloaded.jobTypeFilter = m.jobTypeFilter
+	reloaded.selected = m.selected
 	reloaded.applyFilterAndSort()
 	reloaded.CopyReportCache(&m)
 
@@ -241,6 +278,11 @@ func (m PipelineModel) Update(msg tea.Msg) (PipelineModel, tea.Cmd) {
 }
 
 func (m PipelineModel) handleKey(msg tea.KeyMsg) (PipelineModel, tea.Cmd) {
+	// Bulk picker intercepts b key
+	if m.bulkPicker {
+		return m.handleBulkPicker(msg)
+	}
+
 	switch msg.String() {
 	case "q", "esc":
 		return m, func() tea.Msg { return PipelineClosedMsg{} }
@@ -322,11 +364,75 @@ func (m PipelineModel) handleKey(msg tea.KeyMsg) (PipelineModel, tea.Cmd) {
 	case "p":
 		return m, func() tea.Msg { return PipelineOpenProgressMsg{} }
 
+	case "i":
+		return m, func() tea.Msg { return PipelineOpenInvestorsMsg{} }
+
 	case "r":
 		return m, func() tea.Msg { return PipelineRefreshMsg{} }
 
 	case "c":
 		if len(m.filtered) > 0 {
+			m.statusPicker = true
+			m.statusCursor = 0
+		}
+
+	// Job type secondary filter
+	case "t":
+		for idx, jt := range jobTypeCycle {
+			if jt == m.jobTypeFilter {
+				m.jobTypeFilter = jobTypeCycle[(idx+1)%len(jobTypeCycle)]
+				break
+			}
+		}
+		m.applyFilterAndSort()
+		m.cursor = 0
+		m.scrollOffset = 0
+
+	// Glassdoor browser lookup
+	case "w":
+		if app, ok := m.CurrentApp(); ok {
+			company := strings.ReplaceAll(app.Company, " ", "-")
+			url := "https://www.glassdoor.com/Search/results.htm?keyword=" +
+				strings.ReplaceAll(app.Company, " ", "+")
+			_ = company // suppress unused var
+			return m, func() tea.Msg { return PipelineOpenURLMsg{URL: url} }
+		}
+
+	// Checkbox toggle
+	case " ":
+		if app, ok := m.CurrentApp(); ok {
+			if m.selected == nil {
+				m.selected = make(map[int]bool)
+			}
+			m.selected[app.Number] = !m.selected[app.Number]
+			// advance cursor
+			if m.cursor < len(m.filtered)-1 {
+				m.cursor++
+				m.adjustScroll()
+			}
+		}
+
+	// Select all visible / deselect all
+	case "a":
+		if m.selected == nil {
+			m.selected = make(map[int]bool)
+		}
+		if m.selectedCount() == len(m.filtered) {
+			// all selected → deselect all
+			m.selected = make(map[int]bool)
+		} else {
+			for _, app := range m.filtered {
+				m.selected[app.Number] = true
+			}
+		}
+
+	// Bulk status change
+	case "b":
+		if m.selectedCount() > 0 {
+			m.bulkPicker = true
+			m.bulkCursor = 0
+		} else if len(m.filtered) > 0 {
+			// If nothing selected, fall through to single change
 			m.statusPicker = true
 			m.statusCursor = 0
 		}
@@ -411,6 +517,56 @@ func (m PipelineModel) handleStatusPicker(msg tea.KeyMsg) (PipelineModel, tea.Cm
 	return m, nil
 }
 
+func (m PipelineModel) handleBulkPicker(msg tea.KeyMsg) (PipelineModel, tea.Cmd) {
+	switch msg.String() {
+	case "esc", "q":
+		m.bulkPicker = false
+	case "down", "j":
+		if m.bulkCursor < len(statusOptions)-1 {
+			m.bulkCursor++
+		}
+	case "up", "k":
+		if m.bulkCursor > 0 {
+			m.bulkCursor--
+		}
+	case "enter":
+		m.bulkPicker = false
+		newStatus := statusOptions[m.bulkCursor]
+		// Collect all selected apps and update each
+		var cmds []tea.Cmd
+		path := m.careerOpsPath
+		for _, app := range m.filtered {
+			if m.selected[app.Number] {
+				a := app
+				ns := newStatus
+				cmds = append(cmds, func() tea.Msg {
+					return PipelineUpdateStatusMsg{
+						CareerOpsPath: path,
+						App:           a,
+						NewStatus:     ns,
+					}
+				})
+			}
+		}
+		m.selected = make(map[int]bool)
+		if len(cmds) > 0 {
+			return m, cmds[0] // fire first; subsequent refreshes will cascade
+		}
+	}
+	return m, nil
+}
+
+// selectedCount returns how many apps in the current filtered list are selected.
+func (m PipelineModel) selectedCount() int {
+	count := 0
+	for _, app := range m.filtered {
+		if m.selected[app.Number] {
+			count++
+		}
+	}
+	return count
+}
+
 func (m PipelineModel) loadCurrentReport() tea.Cmd {
 	app, ok := m.CurrentApp()
 	if !ok || app.ReportPath == "" {
@@ -433,18 +589,23 @@ func (m *PipelineModel) applyFilterAndSort() {
 	currentFilter := pipelineTabs[m.activeTab].filter
 	for _, app := range m.apps {
 		norm := data.NormalizeStatus(app.Status)
+		var statusMatch bool
 		switch currentFilter {
 		case filterAll:
-			filtered = append(filtered, app)
+			statusMatch = true
 		case filterTop:
-			if app.Score >= 4.0 && norm != "skip" {
-				filtered = append(filtered, app)
-			}
+			statusMatch = app.Score >= 4.0 && norm != "skip"
 		default:
-			if norm == currentFilter {
-				filtered = append(filtered, app)
-			}
+			statusMatch = norm == currentFilter
 		}
+		if !statusMatch {
+			continue
+		}
+		// Secondary: job type filter
+		if m.jobTypeFilter != "" && app.JobType != m.jobTypeFilter {
+			continue
+		}
+		filtered = append(filtered, app)
 	}
 
 	// Sort
@@ -539,6 +700,7 @@ func (m PipelineModel) cursorLineEstimate() int {
 func (m PipelineModel) View() string {
 	header := m.renderHeader()
 	tabs := m.renderTabs()
+	typeBar := m.renderJobTypeBar()
 	metricsBar := m.renderMetrics()
 	sortBar := m.renderSortBar()
 	body := m.renderBody()
@@ -551,9 +713,9 @@ func (m PipelineModel) View() string {
 		bodyLines = bodyLines[m.scrollOffset:]
 	}
 
-	// Calculate available height for body
+	// Calculate available height for body (added 1 for typeBar)
 	previewLines := strings.Count(preview, "\n") + 1
-	availHeight := m.height - 7 - previewLines // header + tabs(2) + metrics + sortbar + help + preview
+	availHeight := m.height - 8 - previewLines
 	if availHeight < 3 {
 		availHeight = 3
 	}
@@ -562,20 +724,72 @@ func (m PipelineModel) View() string {
 	}
 	body = strings.Join(bodyLines, "\n")
 
-	// Status picker overlay
+	// Overlays
 	if m.statusPicker {
 		body = m.overlayStatusPicker(body)
+	}
+	if m.bulkPicker {
+		body = m.overlayBulkPicker(body)
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left,
 		header,
 		tabs,
+		typeBar,
 		metricsBar,
 		sortBar,
 		body,
 		preview,
 		help,
 	)
+}
+
+// renderJobTypeBar renders the secondary job-type filter row.
+func (m PipelineModel) renderJobTypeBar() string {
+	style := lipgloss.NewStyle().Padding(0, 2).Width(m.width)
+
+	var parts []string
+	for _, jt := range jobTypeCycle {
+		label := jobTypeLabels[jt]
+		if jt == m.jobTypeFilter {
+			parts = append(parts, lipgloss.NewStyle().
+				Foreground(m.theme.Mauve).Bold(true).
+				Render("["+label+"]"))
+		} else {
+			parts = append(parts, lipgloss.NewStyle().
+				Foreground(m.theme.Overlay).
+				Render(label))
+		}
+	}
+
+	selNote := ""
+	if cnt := m.selectedCount(); cnt > 0 {
+		selNote = lipgloss.NewStyle().Foreground(m.theme.Yellow).Bold(true).
+			Render(fmt.Sprintf("  ☑ %d selected", cnt))
+	}
+
+	return style.Render(strings.Join(parts, "  ") + selNote)
+}
+
+// overlayBulkPicker renders the bulk status picker over the body.
+func (m PipelineModel) overlayBulkPicker(body string) string {
+	pad := lipgloss.NewStyle().Padding(0, 2)
+	border := lipgloss.NewStyle().Foreground(m.theme.Yellow).Bold(true)
+	cnt := m.selectedCount()
+	var picker []string
+	picker = append(picker, pad.Render(border.Render(fmt.Sprintf("Bulk change %d selected:", cnt))))
+	for i, opt := range statusOptions {
+		s := lipgloss.NewStyle().Foreground(m.theme.Text).Width(30)
+		prefix := "  "
+		if i == m.bulkCursor {
+			s = s.Background(m.theme.Overlay).Bold(true)
+			prefix = "> "
+		}
+		picker = append(picker, pad.Render(s.Render(prefix+opt)))
+	}
+	lines := strings.Split(body, "\n")
+	lines = append(lines, picker...)
+	return strings.Join(lines, "\n")
 }
 
 func (m PipelineModel) renderHeader() string {
@@ -727,17 +941,29 @@ func (m PipelineModel) renderAppLine(app model.CareerApplication, selected bool)
 	padStyle := lipgloss.NewStyle().Padding(0, 2)
 
 	// Column widths
+	cbW := 2    // checkbox: "☑ " or "☐ "
 	numW := 5   // "#123 "
 	scoreW := 5 // "4.5  "
 	dateW := 10
 	companyW := 16
 	statusW := 12
-	compW := 14
+	remW := 2  // remote indicator: "R " "H " "O " "? "
+	compW := 12
 	// Role gets remaining space
-	roleW := m.width - numW - scoreW - dateW - companyW - statusW - compW - 13
-	if roleW < 15 {
-		roleW = 15
+	roleW := m.width - cbW - numW - scoreW - dateW - companyW - statusW - remW - compW - 15
+	if roleW < 12 {
+		roleW = 12
 	}
+
+	// Checkbox
+	cbChar := "☐"
+	cbColor := m.theme.Subtext
+	if m.selected[app.Number] {
+		cbChar = "☑"
+		cbColor = m.theme.Green
+	}
+	cbStyle := lipgloss.NewStyle().Foreground(cbColor).Width(cbW)
+	cb := cbStyle.Render(cbChar)
 
 	// Tracker number (fixed width)
 	numText := "#—"
@@ -771,21 +997,27 @@ func (m PipelineModel) renderAppLine(app model.CareerApplication, selected bool)
 	statusStyle := lipgloss.NewStyle().Foreground(statusColor).Width(statusW)
 	statusText := statusStyle.Render(statusLabel(norm))
 
+	// Remote indicator from report cache
+	remChar, remColor := m.remoteIndicator(app.ReportPath)
+	remStyle := lipgloss.NewStyle().Foreground(remColor).Width(remW)
+	remText := remStyle.Render(remChar)
+
 	// Comp from report cache -- fixed column
-	compText := ""
+	compText := lipgloss.NewStyle().Width(compW).Render("")
 	if summary, ok := m.reportCache[app.ReportPath]; ok && summary.comp != "" {
 		comp := truncateRunes(summary.comp, compW-1)
-		compStyle := lipgloss.NewStyle().Foreground(m.theme.Yellow)
-		compText = compStyle.Render(comp)
+		compText = lipgloss.NewStyle().Foreground(m.theme.Yellow).Width(compW).Render(comp)
 	}
 
-	line := fmt.Sprintf(" %s %s %s %s %s %s %s",
+	line := fmt.Sprintf(" %s %s %s %s %s %s %s %s %s",
+		cb,
 		numStyle.Render(truncateRunes(numText, numW)),
 		score,
 		dateStyle.Render(truncateRunes(dateText, dateW)),
 		companyStyle.Render(company),
 		roleStyle.Render(role),
 		statusText,
+		remText,
 		compText,
 	)
 
@@ -796,6 +1028,25 @@ func (m PipelineModel) renderAppLine(app model.CareerApplication, selected bool)
 		return padStyle.Render(selStyle.Render(line))
 	}
 	return padStyle.Render(line)
+}
+
+// remoteIndicator returns a single-char indicator and color for the remote field.
+func (m PipelineModel) remoteIndicator(reportPath string) (string, lipgloss.Color) {
+	summary, ok := m.reportCache[reportPath]
+	if !ok || summary.remote == "" {
+		return "?", m.theme.Overlay
+	}
+	r := strings.ToLower(summary.remote)
+	switch {
+	case strings.Contains(r, "yes") || strings.Contains(r, "fully") || strings.Contains(r, "remote"):
+		return "R", m.theme.Green
+	case strings.Contains(r, "hybrid") || strings.Contains(r, "partial"):
+		return "H", m.theme.Yellow
+	case strings.Contains(r, "no") || strings.Contains(r, "office") || strings.Contains(r, "onsite") || strings.Contains(r, "in-person"):
+		return "O", m.theme.Red
+	default:
+		return "?", m.theme.Subtext
+	}
 }
 
 func (m PipelineModel) renderPreview() string {
@@ -843,6 +1094,7 @@ func (m PipelineModel) renderPreview() string {
 	return strings.Join(lines, "\n")
 }
 
+
 func (m PipelineModel) renderHelp() string {
 	style := lipgloss.NewStyle().
 		Foreground(m.theme.Subtext).
@@ -853,133 +1105,153 @@ func (m PipelineModel) renderHelp() string {
 	keyStyle := lipgloss.NewStyle().Bold(true).Foreground(m.theme.Text)
 	descStyle := lipgloss.NewStyle().Foreground(m.theme.Subtext)
 
-	if m.statusPicker {
+	if m.statusPicker || m.bulkPicker {
 		return style.Render(
 			keyStyle.Render("↑↓/jk") + descStyle.Render(" navigate  ") +
 				keyStyle.Render("Enter") + descStyle.Render(" confirm  ") +
 				keyStyle.Render("Esc") + descStyle.Render(" cancel"))
 	}
 
-	brand := lipgloss.NewStyle().Foreground(m.theme.Overlay).Render("career-ops by santifer.io")
-
-	keys := keyStyle.Render("↑↓/jk") + descStyle.Render(" nav  ") +
-		keyStyle.Render("←→/hl") + descStyle.Render(" tabs  ") +
-		keyStyle.Render("s") + descStyle.Render(" sort  ") +
-		keyStyle.Render("r") + descStyle.Render(" refresh  ") +
-		keyStyle.Render("Enter") + descStyle.Render(" report  ") +
-		keyStyle.Render("o") + descStyle.Render(" open URL  ") +
-		keyStyle.Render("c") + descStyle.Render(" change  ") +
-		keyStyle.Render("v") + descStyle.Render(" view  ") +
-		keyStyle.Render("p") + descStyle.Render(" progress  ") +
-		keyStyle.Render("Esc") + descStyle.Render(" quit")
-
-	gap := m.width - lipgloss.Width(keys) - lipgloss.Width(brand) - 2
-	if gap < 1 {
-		gap = 1
+	keys := []string{
+		keyStyle.Render("↑↓") + descStyle.Render(" nav"),
+		keyStyle.Render("enter") + descStyle.Render(" report"),
+		keyStyle.Render("c") + descStyle.Render(" status"),
+		keyStyle.Render("space") + descStyle.Render(" select"),
+		keyStyle.Render("a") + descStyle.Render(" all"),
+		keyStyle.Render("b") + descStyle.Render(" bulk"),
+		keyStyle.Render("t") + descStyle.Render(" type"),
+		keyStyle.Render("tab") + descStyle.Render(" filter"),
+		keyStyle.Render("s") + descStyle.Render(" sort"),
+		keyStyle.Render("w") + descStyle.Render(" Glassdoor"),
+		keyStyle.Render("o") + descStyle.Render(" URL"),
+		keyStyle.Render("i") + descStyle.Render(" investors"),
+		keyStyle.Render("p") + descStyle.Render(" progress"),
+		keyStyle.Render("r") + descStyle.Render(" refresh"),
+		keyStyle.Render("q") + descStyle.Render(" quit"),
 	}
-
-	return style.Render(keys + strings.Repeat(" ", gap) + brand)
+	return style.Render(strings.Join(keys, descStyle.Render("  ")))
 }
 
-func (m PipelineModel) overlayStatusPicker(body string) string {
-	// Render status picker inline at bottom of body
-	bodyLines := strings.Split(body, "\n")
-
-	pickerWidth := 30
-	padStyle := lipgloss.NewStyle().Padding(0, 2)
-	borderStyle := lipgloss.NewStyle().
-		Foreground(m.theme.Blue).
-		Bold(true)
-
-	var picker []string
-	picker = append(picker, padStyle.Render(borderStyle.Render("Change status:")))
-
-	for i, opt := range statusOptions {
-		style := lipgloss.NewStyle().Foreground(m.theme.Text).Width(pickerWidth)
-		if i == m.statusCursor {
-			style = style.Background(m.theme.Overlay).Bold(true)
-		}
-		prefix := "  "
-		if i == m.statusCursor {
-			prefix = "> "
-		}
-		picker = append(picker, padStyle.Render(style.Render(prefix+opt)))
-	}
-
-	// Append picker to body
-	bodyLines = append(bodyLines, picker...)
-	return strings.Join(bodyLines, "\n")
-}
-
-// -- Helpers --
-
-func (m PipelineModel) scoreStyle(score float64) lipgloss.Style {
-	switch {
-	case score >= 4.2:
-		return lipgloss.NewStyle().Foreground(m.theme.Green).Bold(true)
-	case score >= 3.8:
-		return lipgloss.NewStyle().Foreground(m.theme.Yellow)
-	case score >= 3.0:
-		return lipgloss.NewStyle().Foreground(m.theme.Text)
-	default:
-		return lipgloss.NewStyle().Foreground(m.theme.Red)
-	}
-}
-
+// statusColorMap maps canonical status names to display colors.
 func (m PipelineModel) statusColorMap() map[string]lipgloss.Color {
 	return map[string]lipgloss.Color{
-		"interview": m.theme.Green,
+		"applied":   m.theme.Blue,
+		"responded": m.theme.Sky,
+		"interview": m.theme.Mauve,
 		"offer":     m.theme.Green,
-		"applied":   m.theme.Sky,
-		"responded": m.theme.Blue,
-		"evaluated": m.theme.Text,
-		"skip":      m.theme.Red,
-		"rejected":  m.theme.Subtext,
+		"rejected":  m.theme.Red,
 		"discarded": m.theme.Subtext,
+		"evaluated": m.theme.Yellow,
+		"skip":      m.theme.Subtext,
 	}
 }
 
-func (m PipelineModel) countByNormStatus(status string) int {
-	count := 0
-	for _, app := range m.filtered {
-		if data.NormalizeStatus(app.Status) == status {
-			count++
-		}
+// scoreStyle returns a colored style for a score value.
+func (m PipelineModel) scoreStyle(score float64) lipgloss.Style {
+	var c lipgloss.Color
+	switch {
+	case score >= 4.5:
+		c = m.theme.Green
+	case score >= 4.0:
+		c = m.theme.Sky
+	case score >= 3.5:
+		c = m.theme.Yellow
+	case score > 0:
+		c = m.theme.Peach
+	default:
+		c = m.theme.Subtext
 	}
-	return count
+	return lipgloss.NewStyle().Foreground(c).Width(5)
 }
 
-// truncateRunes truncates a string to at most maxRunes runes, appending "..." if truncated.
-func truncateRunes(s string, maxRunes int) string {
-	runes := []rune(s)
-	if len(runes) <= maxRunes {
-		return s
-	}
-	if maxRunes <= 3 {
-		return string(runes[:maxRunes])
-	}
-	return string(runes[:maxRunes-3]) + "..."
-}
-
+// statusLabel returns a short display label for a canonical status.
 func statusLabel(norm string) string {
 	switch norm {
+	case "applied":
+		return "Applied"
+	case "responded":
+		return "Responded"
 	case "interview":
 		return "Interview"
 	case "offer":
 		return "Offer"
-	case "responded":
-		return "Responded"
-	case "applied":
-		return "Applied"
-	case "evaluated":
-		return "Evaluated"
-	case "skip":
-		return "Skip"
 	case "rejected":
 		return "Rejected"
 	case "discarded":
 		return "Discarded"
+	case "evaluated":
+		return "Evaluated"
+	case "skip":
+		return "Skip"
 	default:
+		if norm == "" {
+			return "—"
+		}
 		return norm
 	}
+}
+
+// truncateRunes truncates s to at most n runes, appending ellipsis if cut.
+func truncateRunes(s string, n int) string {
+	r := []rune(s)
+	if len(r) <= n {
+		return s
+	}
+	if n <= 1 {
+		return string(r[:n])
+	}
+	return string(r[:n-1]) + "…"
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+// overlayStatusPicker renders the single-app status picker as an overlay.
+func (m PipelineModel) overlayStatusPicker(body string) string {
+	app, ok := m.CurrentApp()
+	if !ok {
+		return body
+	}
+
+	title := fmt.Sprintf("Change status: %s — %s", app.Company, app.Role)
+	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(m.theme.Text)
+	selStyle := lipgloss.NewStyle().Bold(true).Foreground(m.theme.Green)
+	optStyle := lipgloss.NewStyle().Foreground(m.theme.Subtext)
+	boxStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(m.theme.Blue).
+		Padding(1, 3).
+		Background(m.theme.Base)
+
+	var rows []string
+	rows = append(rows, titleStyle.Render(title))
+	rows = append(rows, "")
+	for i, opt := range statusOptions {
+		if i == m.statusCursor {
+			rows = append(rows, selStyle.Render("▶ "+opt))
+		} else {
+			rows = append(rows, optStyle.Render("  "+opt))
+		}
+	}
+	rows = append(rows, "")
+	rows = append(rows, optStyle.Render("↑↓ navigate  Enter confirm  Esc cancel"))
+
+	box := boxStyle.Render(strings.Join(rows, "\n"))
+	return lipgloss.Place(m.width, m.height-3, lipgloss.Center, lipgloss.Center, box,
+		lipgloss.WithWhitespaceForeground(m.theme.Subtext))
+}
+
+// countByNormStatus returns the count of filtered apps with the given normalized status.
+func (m PipelineModel) countByNormStatus(norm string) int {
+	count := 0
+	for _, app := range m.filtered {
+		if data.NormalizeStatus(app.Status) == norm {
+			count++
+		}
+	}
+	return count
 }

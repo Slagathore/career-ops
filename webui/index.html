@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Career-Ops Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.13.5/cdn.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.1/marked.min.js"></script>
+<style>
+:root{--base:#1e1e2e;--mantle:#181825;--crust:#11111b;--surface0:#313244;--surface1:#45475a;--surface2:#585b70;--overlay0:#6c7086;--text:#cdd6f4;--subtext0:#a6adc8;--blue:#89b4fa;--green:#a6e3a1;--yellow:#f9e2af;--red:#f38ba8;--mauve:#cba6f7;--sky:#89dceb;--peach:#fab387;--pink:#f5c2e7;--teal:#94e2d5;--lavender:#b4befe}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--base);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;display:flex;height:100vh;overflow:hidden}
+/* Sidebar */
+#sidebar{width:220px;background:var(--mantle);border-right:1px solid var(--surface0);display:flex;flex-direction:column;flex-shrink:0}
+#sidebar header{padding:20px 16px 12px;border-bottom:1px solid var(--surface0)}
+#sidebar header h1{font-size:15px;font-weight:700;color:var(--blue);letter-spacing:.5px}
+#sidebar header p{font-size:11px;color:var(--subtext0);margin-top:2px}
+nav{flex:1;padding:8px 0;overflow-y:auto}
+nav button{display:flex;align-items:center;gap:10px;width:100%;padding:10px 16px;background:none;border:none;color:var(--subtext0);font-size:13px;cursor:pointer;text-align:left;border-radius:0;transition:all .15s}
+nav button:hover{background:var(--surface0);color:var(--text)}
+nav button.active{background:var(--surface0);color:var(--blue);font-weight:600;border-right:2px solid var(--blue)}
+nav button .icon{font-size:16px;width:20px;text-align:center}
+nav button .badge{margin-left:auto;background:var(--surface1);color:var(--subtext0);font-size:11px;padding:1px 6px;border-radius:10px}
+/* Main */
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#topbar{padding:12px 20px;border-bottom:1px solid var(--surface0);background:var(--mantle);display:flex;align-items:center;gap:12px}
+#topbar h2{font-size:16px;font-weight:600;color:var(--text)}
+#topbar .spacer{flex:1}
+#content{flex:1;overflow-y:auto;padding:20px}
+/* Cards */
+.card{background:var(--surface0);border-radius:8px;padding:16px;border:1px solid var(--surface1)}
+.card h3{font-size:12px;color:var(--subtext0);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
+.card .value{font-size:28px;font-weight:700;color:var(--text)}
+.card .value.blue{color:var(--blue)} .card .value.green{color:var(--green)} .card .value.yellow{color:var(--yellow)} .card .value.mauve{color:var(--mauve)}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+/* Table */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+thead th{padding:8px 10px;text-align:left;font-size:11px;color:var(--subtext0);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--surface1);background:var(--mantle);position:sticky;top:0;z-index:1}
+tbody tr{border-bottom:1px solid var(--surface0);transition:background .1s}
+tbody tr:hover{background:var(--surface0)}
+tbody td{padding:8px 10px;font-size:13px}
+/* Badges */
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.badge.interested{background:#2a3a2a;color:var(--green)}
+.badge.applying{background:#2a2a3a;color:var(--sky)}
+.badge.applied{background:#2d3a4a;color:var(--blue)}
+.badge.skip{background:#3a2a2a;color:var(--red)}
+.badge.unreviewed{background:var(--surface1);color:var(--subtext0)}
+.badge.interview{background:#3a2a4a;color:var(--mauve)}
+.badge.offer{background:#1a3a2a;color:var(--green)}
+/* Search/Filter bar */
+.filters{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.filters input,.filters select{background:var(--surface0);border:1px solid var(--surface1);color:var(--text);padding:7px 12px;border-radius:6px;font-size:13px;outline:none}
+.filters input:focus,.filters select:focus{border-color:var(--blue)}
+.filters input{flex:1;min-width:200px}
+/* Buttons */
+.btn{padding:6px 12px;border-radius:6px;border:1px solid var(--surface1);background:var(--surface0);color:var(--text);font-size:12px;cursor:pointer;transition:all .15s}
+.btn:hover{border-color:var(--blue);color:var(--blue)}
+.btn.primary{background:var(--blue);color:var(--base);border-color:var(--blue);font-weight:600}
+.btn.primary:hover{background:var(--lavender)}
+.btn.sm{padding:3px 8px;font-size:11px}
+/* Status select */
+select.status-pick{background:var(--surface0);border:1px solid var(--surface1);color:var(--text);padding:3px 6px;border-radius:4px;font-size:11px;cursor:pointer}
+/* Profile */
+.profile-grid{display:grid;grid-template-columns:1fr 1.4fr;gap:20px}
+.role-card{background:var(--surface0);border:1px solid var(--surface1);border-radius:6px;padding:12px;margin-bottom:8px}
+.role-card h4{font-size:13px;color:var(--blue);font-weight:600}
+.role-card .level{font-size:11px;color:var(--mauve);margin-top:2px}
+.role-card p{font-size:12px;color:var(--subtext0);margin-top:6px;line-height:1.5}
+.superpower{background:var(--surface0);border-left:3px solid var(--green);padding:8px 12px;margin-bottom:6px;border-radius:0 6px 6px 0;font-size:12px;color:var(--subtext0);line-height:1.5}
+.proof-card{background:var(--surface0);border:1px solid var(--surface1);border-radius:6px;padding:12px;margin-bottom:8px}
+.proof-card h4{font-size:13px;color:var(--yellow);font-weight:600}
+.proof-card .metric{font-size:12px;color:var(--subtext0);margin-top:6px}
+.info-row{display:flex;gap:8px;margin-bottom:6px;font-size:13px}
+.info-row .label{color:var(--subtext0);min-width:110px}
+.info-row .val{color:var(--text)}
+/* CV */
+#cv-content{max-width:800px;line-height:1.7}
+#cv-content h1{font-size:22px;color:var(--blue);margin-bottom:6px}
+#cv-content h2{font-size:16px;color:var(--sky);margin:20px 0 8px;border-bottom:1px solid var(--surface1);padding-bottom:4px}
+#cv-content h3{font-size:14px;color:var(--mauve);margin:14px 0 4px}
+#cv-content p{color:var(--subtext0);margin-bottom:8px;font-size:13px}
+#cv-content ul{padding-left:18px;color:var(--subtext0);font-size:13px}
+#cv-content li{margin-bottom:3px}
+#cv-content a{color:var(--blue)}
+#cv-content strong{color:var(--text)}
+#cv-content em{color:var(--subtext0)}
+#cv-content hr{border:none;border-top:1px solid var(--surface1);margin:16px 0}
+/* Investors */
+.inv-row td:last-child{white-space:nowrap}
+/* Chart containers */
+.chart-box{background:var(--surface0);border:1px solid var(--surface1);border-radius:8px;padding:16px}
+.chart-box h3{font-size:12px;color:var(--subtext0);text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px}
+/* Misc */
+.section-title{font-size:13px;font-weight:600;color:var(--subtext0);text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px;margin-top:20px}
+.section-title:first-child{margin-top:0}
+.empty{color:var(--subtext0);padding:40px;text-align:center;font-size:13px}
+.tag{display:inline-block;background:var(--surface1);color:var(--subtext0);font-size:10px;padding:1px 6px;border-radius:8px;margin:1px}
+a{color:var(--blue);text-decoration:none} a:hover{text-decoration:underline}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--surface1);border-top-color:var(--blue);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body x-data="app()" x-init="init()">
+
+<!-- Sidebar -->
+<div id="sidebar">
+  <header>
+    <h1>⚡ Career-Ops</h1>
+    <p x-text="profile?.candidate?.full_name || 'Loading...'"></p>
+  </header>
+  <nav>
+    <button @click="tab='overview'" :class="{active:tab==='overview'}"><span class="icon">📊</span>Overview</button>
+    <button @click="tab='jobs';loadJobs()" :class="{active:tab==='jobs'}">
+      <span class="icon">💼</span>Jobs<span class="badge" x-text="jobs.length||'...'"></span>
+    </button>
+    <button @click="tab='profile';loadProfile()" :class="{active:tab==='profile'}"><span class="icon">👤</span>Profile</button>
+    <button @click="tab='cv';loadCV()" :class="{active:tab==='cv'}"><span class="icon">📄</span>CV</button>
+    <button @click="tab='activity';loadScan()" :class="{active:tab==='activity'}"><span class="icon">📡</span>Scanner Activity</button>
+    <button @click="tab='investors';loadInvestors()" :class="{active:tab==='investors'}"><span class="icon">💰</span>Investors</button>
+  </nav>
+</div>
+
+<!-- Main -->
+<div id="main">
+  <div id="topbar">
+    <h2 x-text="tabTitle()"></h2>
+    <div class="spacer"></div>
+    <span x-show="loading" class="spinner"></span>
+  </div>
+  <div id="content">
+
+    <!-- OVERVIEW -->
+    <div x-show="tab==='overview'">
+      <div class="grid-4" x-show="stats">
+        <div class="card"><h3>Total Jobs Found</h3><div class="value blue" x-text="stats?.total_jobs||0"></div></div>
+        <div class="card"><h3>Interested</h3><div class="value green" x-text="stats?.by_user_status?.interested||0"></div></div>
+        <div class="card"><h3>Applying / Applied</h3><div class="value yellow" x-text="(stats?.by_user_status?.applying||0)+(stats?.by_user_status?.applied||0)"></div></div>
+        <div class="card"><h3>Skipped</h3><div class="value" style="color:var(--overlay0)" x-text="stats?.by_user_status?.skip||0"></div></div>
+      </div>
+      <div class="grid-2">
+        <div class="chart-box"><h3>Jobs by Portal</h3><canvas id="portalChart" height="200"></canvas></div>
+        <div class="chart-box"><h3>Discovery Timeline</h3><canvas id="timelineChart" height="200"></canvas></div>
+      </div>
+      <div class="section-title">Top Companies by Opening Count</div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Company</th><th>Openings</th></tr></thead>
+          <tbody>
+            <template x-for="c in stats?.top_companies||[]" :key="c.company">
+              <tr><td x-text="c.company"></td><td><span class="badge applied" x-text="c.count"></span></td></tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- JOBS -->
+    <div x-show="tab==='jobs'">
+      <div class="filters">
+        <input type="text" placeholder="Search company or title…" x-model="jobSearch">
+        <select x-model="jobStatusFilter">
+          <option value="">All statuses</option>
+          <option value="unreviewed">Unreviewed</option>
+          <option value="interested">Interested</option>
+          <option value="applying">Applying</option>
+          <option value="applied">Applied</option>
+          <option value="interview">Interview</option>
+          <option value="offer">Offer</option>
+          <option value="skip">Skip</option>
+        </select>
+        <select x-model="jobPortalFilter">
+          <option value="">All portals</option>
+          <template x-for="p in portals" :key="p"><option :value="p" x-text="p"></option></template>
+        </select>
+        <select x-model="jobCompanyFilter">
+          <option value="">All companies</option>
+          <template x-for="c in companies" :key="c"><option :value="c" x-text="c"></option></template>
+        </select>
+        <span style="color:var(--subtext0);font-size:12px" x-text="filteredJobs.length+' jobs'"></span>
+      </div>
+      <div class="table-wrap card" style="padding:0">
+        <table>
+          <thead><tr><th>Company</th><th>Title</th><th>Portal</th><th>Added</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>
+            <template x-for="j in filteredJobs" :key="j.url">
+              <tr>
+                <td style="font-weight:600;color:var(--text)" x-text="j.company"></td>
+                <td style="max-width:300px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" x-text="j.title"></td>
+                <td><span class="tag" x-text="j.portal||'—'"></span></td>
+                <td style="color:var(--subtext0)" x-text="j.first_seen?j.first_seen.slice(0,10):'—'"></td>
+                <td>
+                  <select class="status-pick" :value="j.user_status||''" @change="setStatus(j,$event.target.value)">
+                    <option value="">—</option>
+                    <option value="interested">Interested</option>
+                    <option value="applying">Applying</option>
+                    <option value="applied">Applied</option>
+                    <option value="interview">Interview</option>
+                    <option value="offer">Offer</option>
+                    <option value="skip">Skip</option>
+                  </select>
+                </td>
+                <td><a :href="j.url" target="_blank" class="btn sm">Open ↗</a></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+        <div class="empty" x-show="filteredJobs.length===0">No jobs match your filters.</div>
+      </div>
+    </div>
+
+    <!-- PROFILE -->
+    <div x-show="tab==='profile'" x-show="profile">
+      <div class="profile-grid" x-show="profile">
+        <div>
+          <div class="section-title">Contact</div>
+          <div class="card" style="margin-bottom:16px">
+            <div class="info-row"><span class="label">Name</span><span class="val" x-text="profile?.candidate?.full_name"></span></div>
+            <div class="info-row"><span class="label">Email</span><span class="val"><a :href="'mailto:'+profile?.candidate?.email" x-text="profile?.candidate?.email"></a></span></div>
+            <div class="info-row"><span class="label">Phone</span><span class="val" x-text="profile?.candidate?.phone"></span></div>
+            <div class="info-row"><span class="label">Location</span><span class="val" x-text="profile?.candidate?.location"></span></div>
+            <div class="info-row"><span class="label">GitHub</span><span class="val"><a :href="'https://'+profile?.candidate?.github" x-text="profile?.candidate?.github" target="_blank"></a></span></div>
+          </div>
+          <div class="section-title">Compensation</div>
+          <div class="card" style="margin-bottom:16px">
+            <div class="info-row"><span class="label">Target Range</span><span class="val" style="color:var(--green)" x-text="profile?.compensation?.target_range"></span></div>
+            <div class="info-row"><span class="label">Minimum</span><span class="val" x-text="profile?.compensation?.minimum"></span></div>
+            <div class="info-row"><span class="label">Hourly</span><span class="val" x-text="profile?.compensation?.target_hourly"></span></div>
+            <p style="font-size:11px;color:var(--subtext0);margin-top:8px" x-text="profile?.compensation?.notes"></p>
+          </div>
+          <div class="section-title">Location Preferences</div>
+          <div class="card">
+            <div class="info-row"><span class="label">Remote</span><span class="val" x-text="profile?.location?.remote_preference"></span></div>
+            <div class="info-row"><span class="label">Hybrid OK?</span><span class="val" x-text="profile?.location?.hybrid_acceptable"></span></div>
+            <div class="info-row"><span class="label">Travel</span><span class="val" x-text="profile?.location?.travel_acceptable"></span></div>
+            <div class="info-row"><span class="label">Relocation</span><span class="val" x-text="profile?.location?.relocation"></span></div>
+            <div class="info-row"><span class="label">Visa</span><span class="val" x-text="profile?.location?.visa_status"></span></div>
+          </div>
+        </div>
+        <div>
+          <div class="section-title">Headline</div>
+          <div class="card" style="margin-bottom:16px;border-left:3px solid var(--blue)">
+            <p style="color:var(--text);font-size:13px;line-height:1.6" x-text="profile?.narrative?.headline"></p>
+          </div>
+          <div class="section-title">Superpowers</div>
+          <template x-for="s in profile?.narrative?.superpowers||[]" :key="s">
+            <div class="superpower" x-text="s"></div>
+          </template>
+          <div class="section-title" style="margin-top:16px">Target Roles</div>
+          <template x-for="r in profile?.target_roles?.archetypes||[]" :key="r.name">
+            <div class="role-card">
+              <h4 x-text="r.name"></h4>
+              <div class="level" x-text="r.level+' · '+r.fit"></div>
+              <p x-text="r.notes"></p>
+            </div>
+          </template>
+          <div class="section-title" style="margin-top:16px">Proof Points</div>
+          <template x-for="p in profile?.narrative?.proof_points||[]" :key="p.name">
+            <div class="proof-card">
+              <h4 x-text="p.name"></h4>
+              <div class="metric" x-text="p.hero_metric"></div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <!-- CV -->
+    <div x-show="tab==='cv'">
+      <div id="cv-content" x-html="cvHTML"></div>
+    </div>
+
+    <!-- SCANNER ACTIVITY -->
+    <div x-show="tab==='activity'">
+      <div class="grid-4" style="margin-bottom:20px">
+        <div class="card"><h3>Total Scanned</h3><div class="value blue" x-text="scanEntries.length"></div></div>
+        <div class="card"><h3>Portals</h3><div class="value mauve" x-text="scanPortals.length"></div></div>
+        <div class="card"><h3>Companies</h3><div class="value yellow" x-text="scanCompanies.length"></div></div>
+        <div class="card"><h3>Last Scan</h3><div class="value" style="font-size:14px;padding-top:6px" x-text="lastScan"></div></div>
+      </div>
+      <div class="filters">
+        <input type="text" placeholder="Search…" x-model="scanSearch">
+        <select x-model="scanPortalFilter">
+          <option value="">All portals</option>
+          <template x-for="p in scanPortals" :key="p"><option :value="p" x-text="p"></option></template>
+        </select>
+      </div>
+      <div class="table-wrap card" style="padding:0">
+        <table>
+          <thead><tr><th>Company</th><th>Title</th><th>Portal</th><th>First Seen</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            <template x-for="e in filteredScan" :key="e.url">
+              <tr>
+                <td style="font-weight:600" x-text="e.company"></td>
+                <td x-text="e.title"></td>
+                <td><span class="tag" x-text="e.portal"></span></td>
+                <td style="color:var(--subtext0)" x-text="e.first_seen?e.first_seen.slice(0,10):'—'"></td>
+                <td><span class="badge unreviewed" x-text="e.status"></span></td>
+                <td><a :href="e.url" target="_blank" class="btn sm">Open ↗</a></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- INVESTORS -->
+    <div x-show="tab==='investors'">
+      <div class="grid-4" style="margin-bottom:16px">
+        <template x-for="s in invStatusCounts" :key="s.label">
+          <div class="card"><h3 x-text="s.label"></h3><div class="value" :style="'color:'+s.color" x-text="s.count"></div></div>
+        </template>
+      </div>
+      <div class="table-wrap card" style="padding:0">
+        <table>
+          <thead><tr><th>Name</th><th>Firm</th><th>Focus</th><th>Status</th><th>Notes</th><th>Links</th></tr></thead>
+          <tbody class="inv-row">
+            <template x-for="inv in investors" :key="inv.name">
+              <tr>
+                <td style="font-weight:600;white-space:nowrap" x-text="inv.name"></td>
+                <td style="color:var(--subtext0)" x-text="inv.firm"></td>
+                <td><template x-for="f in inv.focus||[]" :key="f"><span class="tag" x-text="f"></span></template></td>
+                <td><span class="badge" :class="inv.status" x-text="inv.status||'—'"></span></td>
+                <td style="font-size:12px;color:var(--subtext0);max-width:250px" x-text="inv.notes"></td>
+                <td style="white-space:nowrap">
+                  <template x-if="inv.website"><a :href="inv.website" target="_blank" class="btn sm" style="margin-right:4px">Site ↗</a></template>
+                  <a :href="'https://google.com/search?q='+encodeURIComponent(inv.name+' '+inv.firm)" target="_blank" class="btn sm">Search</a>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+        <div class="empty" x-show="investors.length===0">No investors loaded.</div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<script>
+const MOCHA={blue:'#89b4fa',green:'#a6e3a1',yellow:'#f9e2af',red:'#f38ba8',mauve:'#cba6f7',sky:'#89dceb',peach:'#fab387',teal:'#94e2d5',overlay:'#6c7086',surface:'#313244',text:'#cdd6f4',subtext:'#a6adc8'};
+
+function app(){
+  return {
+    tab:'overview', loading:false,
+    stats:null, jobs:[], profile:null, cvHTML:'', scanEntries:[], investors:[],
+    jobSearch:'', jobStatusFilter:'', jobPortalFilter:'', jobCompanyFilter:'',
+    scanSearch:'', scanPortalFilter:'',
+    portalChart:null, timelineChart:null,
+
+    async init(){
+      await this.loadStats();
+      this.loadProfile();
+    },
+
+    tabTitle(){
+      const m={overview:'Overview',jobs:'Job Pipeline',profile:'My Profile',cv:'Curriculum Vitae',activity:'Scanner Activity',investors:'Investor Pipeline'};
+      return m[this.tab]||'Dashboard';
+    },
+
+    async api(path){
+      const r=await fetch(path);
+      return r.json();
+    },
+
+    async loadStats(){
+      this.loading=true;
+      try{
+        this.stats=await this.api('/api/stats');
+        this.$nextTick(()=>this.renderCharts());
+      }finally{this.loading=false;}
+    },
+
+    async loadJobs(){
+      if(this.jobs.length) return;
+      this.loading=true;
+      try{ this.jobs=await this.api('/api/jobs'); }
+      finally{this.loading=false;}
+    },
+
+    async loadProfile(){
+      if(this.profile) return;
+      this.profile=await this.api('/api/profile');
+    },
+
+    async loadCV(){
+      if(this.cvHTML) return;
+      this.loading=true;
+      try{
+        const md=await this.api('/api/cv');
+        this.cvHTML=marked.parse(md||'');
+      }finally{this.loading=false;}
+    },
+
+    async loadScan(){
+      if(this.scanEntries.length) return;
+      this.loading=true;
+      try{ this.scanEntries=await this.api('/api/scan-history'); }
+      finally{this.loading=false;}
+    },
+
+    async loadInvestors(){
+      if(this.investors.length) return;
+      this.loading=true;
+      try{ this.investors=await this.api('/api/investors'); }
+      finally{this.loading=false;}
+    },
+
+    get filteredJobs(){
+      const s=this.jobSearch.toLowerCase();
+      const sf=this.jobStatusFilter;
+      const pf=this.jobPortalFilter;
+      const cf=this.jobCompanyFilter;
+      return this.jobs.filter(j=>{
+        if(s&&!(j.company?.toLowerCase().includes(s)||j.title?.toLowerCase().includes(s))) return false;
+        if(sf){const us=j.user_status||'unreviewed'; if(us!==sf) return false;}
+        if(pf&&j.portal!==pf) return false;
+        if(cf&&j.company!==cf) return false;
+        return true;
+      });
+    },
+
+    get portals(){
+      return [...new Set(this.jobs.map(j=>j.portal).filter(Boolean))].sort();
+    },
+
+    get companies(){
+      return [...new Set(this.jobs.map(j=>j.company).filter(Boolean))].sort();
+    },
+
+    get filteredScan(){
+      const s=this.scanSearch.toLowerCase();
+      const pf=this.scanPortalFilter;
+      return this.scanEntries.filter(e=>{
+        if(s&&!(e.company?.toLowerCase().includes(s)||e.title?.toLowerCase().includes(s))) return false;
+        if(pf&&e.portal!==pf) return false;
+        return true;
+      });
+    },
+
+    get scanPortals(){
+      return [...new Set(this.scanEntries.map(e=>e.portal).filter(Boolean))].sort();
+    },
+
+    get scanCompanies(){
+      return [...new Set(this.scanEntries.map(e=>e.company).filter(Boolean))];
+    },
+
+    get lastScan(){
+      if(!this.scanEntries.length) return '—';
+      const dates=this.scanEntries.map(e=>e.first_seen).filter(Boolean).sort();
+      return dates[dates.length-1]?.slice(0,10)||'—';
+    },
+
+    get invStatusCounts(){
+      const counts={};
+      (this.investors||[]).forEach(i=>{const s=i.status||'researching';counts[s]=(counts[s]||0)+1;});
+      const colors={researching:MOCHA.subtext,pitched:MOCHA.blue,responded:MOCHA.sky,meeting:MOCHA.mauve,interested:MOCHA.green,passed:MOCHA.red};
+      return Object.entries(counts).map(([k,v])=>({label:k,count:v,color:colors[k]||MOCHA.text}));
+    },
+
+    async setStatus(job, status){
+      job.user_status=status;
+      await fetch('/api/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:job.url,status})});
+      this.loadStats();
+    },
+
+    renderCharts(){
+      if(!this.stats) return;
+      // Portal chart
+      const pc=document.getElementById('portalChart');
+      if(pc){
+        if(this.portalChart) this.portalChart.destroy();
+        const labels=Object.keys(this.stats.by_portal);
+        const data=labels.map(k=>this.stats.by_portal[k]);
+        const colors=[MOCHA.blue,MOCHA.mauve,MOCHA.green,MOCHA.yellow,MOCHA.peach,MOCHA.sky,MOCHA.teal,MOCHA.pink];
+        this.portalChart=new Chart(pc,{type:'bar',data:{labels,datasets:[{data,backgroundColor:colors.slice(0,labels.length),borderRadius:4}]},options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:MOCHA.subtext},grid:{color:MOCHA.surface}},y:{ticks:{color:MOCHA.subtext},grid:{color:MOCHA.surface}}},responsive:true}});
+      }
+      // Timeline chart
+      const tc=document.getElementById('timelineChart');
+      if(tc&&this.stats.daily_activity?.length){
+        if(this.timelineChart) this.timelineChart.destroy();
+        const labels=this.stats.daily_activity.map(d=>d.date);
+        const data=this.stats.daily_activity.map(d=>d.count);
+        this.timelineChart=new Chart(tc,{type:'line',data:{labels,datasets:[{data,borderColor:MOCHA.green,backgroundColor:'rgba(166,227,161,.15)',fill:true,tension:.3,pointRadius:3,pointBackgroundColor:MOCHA.green}]},options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:MOCHA.subtext,maxTicksLimit:8},grid:{color:MOCHA.surface}},y:{ticks:{color:MOCHA.subtext},grid:{color:MOCHA.surface}}},responsive:true}});
+      }
+    }
+  };
+}
+</script>
+</body>
+</html>
