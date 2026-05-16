@@ -309,6 +309,7 @@ code{background:var(--surface2);padding:1px 5px;border-radius:3px;font-size:12px
     <button onclick="switchTab('intel')" data-tab="intel"><span class="icon">📊</span>Intel<span class="badge" id="badge-intel">…</span></button>
     <button onclick="switchTab('pipeline')" data-tab="pipeline"><span class="icon">📈</span>Pipeline</button>
     <button onclick="switchTab('investors')" data-tab="investors"><span class="icon">💡</span>Investors</button>
+    <button onclick="switchTab('tools')" data-tab="tools"><span class="icon">🛠️</span>Tools</button>
     <button onclick="switchTab('settings')" data-tab="settings"><span class="icon">⚙️</span>Settings</button>
   </nav>
   <div id="sidebar-footer">
@@ -930,6 +931,19 @@ code{background:var(--surface2);padding:1px 5px;border-radius:3px;font-size:12px
       </div>
     </div>
 
+    <!-- ──────────────────────────── TOOLS ─────────────────────────────────── -->
+    <div id="tab-tools" class="tab-panel" style="display:none">
+      <div class="card">
+        <div class="section-title">🛠️ CLI Utilities</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;line-height:1.6">
+          Every career-ops maintenance script, runnable from here — no terminal needed.
+          Output streams live below.
+        </div>
+        <div id="tools-buttons" class="btn-group" style="flex-wrap:wrap;gap:8px"></div>
+        <div id="tools-sse" class="sse-panel" style="display:none;margin-top:14px"></div>
+      </div>
+    </div>
+
     <!-- ──────────────────────────── SETTINGS ──────────────────────────────── -->
     <div id="tab-settings" class="tab-panel" style="display:none">
       <div class="grid-2">
@@ -981,6 +995,26 @@ code{background:var(--surface2);padding:1px 5px;border-radius:3px;font-size:12px
             Your API key is stored locally in <code>data/settings.json</code> and never leaves your machine.
           </div>
         </div>
+      </div>
+
+      <!-- Background Daemon -->
+      <div class="card" style="margin-top:16px">
+        <div class="section-title">🤖 Background Daemon</div>
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <label class="toggle-wrap" style="display:flex;align-items:center;gap:8px;font-size:13px">
+            <input type="checkbox" id="daemon-enabled" onchange="toggleDaemon()">
+            <span>Auto-evaluate &amp; enrich jobs in the background</span>
+          </label>
+          <button class="btn sm" onclick="daemonRunNow()">▶ Run now</button>
+          <button class="btn sm" onclick="loadDaemonStatus()">↺ Refresh</button>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:10px;line-height:1.6">
+          When on, the daemon scores one pending job per cycle (filling the Score column on its own)
+          and enriches companies once the evaluation queue is empty. Model:
+          <code id="daemon-model">gemini-3-flash-preview:cloud</code>.
+          State persists in <code>data/settings.json</code>.
+        </div>
+        <div id="daemon-status" style="font-size:11px;color:var(--text-muted);margin-top:8px"></div>
       </div>
 
       <!-- ── Application Profile ──────────────────────────────────────────── -->
@@ -1138,7 +1172,7 @@ const TAB_TITLES = {
   overview:'Overview', jobs:'Job Pipeline', search:'Search',
   apply:'Apply', resume:'Resume', discover:'Discover — Career AI',
   intel:'Company Intel', pipeline:'Application Pipeline',
-  investors:'Investors', settings:'Settings'
+  investors:'Investors', tools:'Tools — CLI Utilities', settings:'Settings'
 };
 
 function switchTab(name) {
@@ -1155,11 +1189,12 @@ function switchTab(name) {
   if (name === 'intel') loadIntel().then(renderIntel);
   if (name === 'investors') loadInvestors().then(renderInvestors);
   if (name === 'pipeline') loadPipeline().then(renderPipeline);
-  if (name === 'settings') { loadPortals().then(renderSettings); loadSettingsAI(); loadApplicationProfile(); refreshGmailStatus(); loadCredentialsList(); loadLearnedFieldsStats(); }
+  if (name === 'settings') { loadPortals().then(renderSettings); loadSettingsAI(); loadApplicationProfile(); refreshGmailStatus(); loadCredentialsList(); loadLearnedFieldsStats(); loadDaemonStatus(); }
   if (name === 'search') { loadSavedSearches().then(renderSavedSearches); loadPortalQueries(); loadRolePresets(); }
   if (name === 'jobs') loadCompanyLocations();
   if (name === 'apply') loadApplyConfig();
   if (name === 'resume') loadDocuments();
+  if (name === 'tools') renderTools();
   if (name === 'discover') initDiscoverTab();
 }
 
@@ -2435,11 +2470,14 @@ function renderDiscoverModels(data) {
     return `<option value="${esc(m.id)}" data-source="${esc(m.source)}">${icon} ${esc(m.name)} (${esc(m.source)})</option>`;
   }).join('');
 
-  // Restore the previously-selected model if it's still available;
-  // otherwise fall back to the first option.
+  // Restore the previously-selected model if it's still available; otherwise
+  // prefer the configured default (gemini-3-flash-preview:cloud), else first.
   const savedModel = localStorage.getItem('careerops:model');
+  const DEFAULT_MODEL = 'gemini-3-flash-preview:cloud';
   if (savedModel && data.models.some(m => m.id === savedModel)) {
     sel.value = savedModel;
+  } else if (data.models.some(m => m.id === DEFAULT_MODEL)) {
+    sel.value = DEFAULT_MODEL;
   }
   onModelChange();
 
@@ -2865,6 +2903,86 @@ async function loadSettingsAI() {
     }
     checkOllamaStatus();
   } catch(e) { console.error(e); }
+}
+
+// ── Background daemon ─────────────────────────────────────────────────────────
+
+async function loadDaemonStatus() {
+  const statusEl = document.getElementById('daemon-status');
+  try {
+    const d = await api('/api/daemon/status');
+    const cb = document.getElementById('daemon-enabled');
+    if (cb) cb.checked = !!d.enabled;
+    const modelEl = document.getElementById('daemon-model');
+    if (modelEl && d.model) modelEl.textContent = d.model;
+    if (statusEl) {
+      const bits = [];
+      bits.push(d.running ? '⚙️ running now' : (d.enabled ? '🟢 on' : '⚪ off'));
+      bits.push(`every ${d.intervalMin || 4} min`);
+      if (d.lastRun) bits.push(`last: ${d.lastRun}`);
+      if (d.lastResult) bits.push(esc(d.lastResult));
+      statusEl.textContent = bits.join('  ·  ');
+    }
+  } catch(e) {
+    if (statusEl) statusEl.textContent = 'Error: ' + e.message;
+  }
+}
+
+async function toggleDaemon() {
+  const cb = document.getElementById('daemon-enabled');
+  const enabled = !!cb?.checked;
+  try {
+    await api('/api/daemon/toggle', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ enabled }),
+    });
+    showToast(enabled ? 'Daemon on' : 'Daemon off');
+    loadDaemonStatus();
+  } catch(e) {
+    showToast('Error: ' + e.message);
+    if (cb) cb.checked = !enabled; // revert on failure
+  }
+}
+
+async function daemonRunNow() {
+  try {
+    await api('/api/daemon/run-now', { method: 'POST' });
+    showToast('Daemon tick triggered');
+    setTimeout(loadDaemonStatus, 1500);
+  } catch(e) { showToast('Error: ' + e.message); }
+}
+
+// ── Tools tab ─────────────────────────────────────────────────────────────────
+
+const TOOLS = [
+  { id:'evaluate-next',      label:'⭐ Evaluate Next Job',   desc:'Score the next unevaluated pipeline job' },
+  { id:'doctor',             label:'🩺 Doctor',             desc:'Full system health check' },
+  { id:'verify-pipeline',    label:'✅ Verify Pipeline',    desc:'Check tracker/report integrity' },
+  { id:'analyze-patterns',   label:'📊 Analyze Patterns',   desc:'Rejection-pattern analysis' },
+  { id:'followup-cadence',   label:'📅 Follow-up Cadence',  desc:'Who to follow up with, when' },
+  { id:'check-liveness',     label:'💓 Check Liveness',     desc:'Are tracked postings still open' },
+  { id:'cv-sync-check',      label:'🔄 CV Sync Check',      desc:'CV vs report consistency' },
+  { id:'merge-tracker',      label:'🧬 Merge Tracker',      desc:'Merge batch tracker additions' },
+  { id:'dedup-tracker',      label:'♊ Dedup Tracker',       desc:'Remove duplicate tracker rows' },
+  { id:'normalize-statuses', label:'📐 Normalize Statuses', desc:'Canonicalize application states' },
+  { id:'generate-pdf',       label:'📄 Generate CV PDF',    desc:'Render cv.md to a PDF in output/' },
+  { id:'generate-latex',     label:'📐 Generate LaTeX CV',  desc:'Compile the LaTeX CV template' },
+  { id:'update-check',       label:'🔎 Check for Updates',  desc:'Check for a career-ops update' },
+  { id:'update-apply',       label:'⬆️ Apply Update',       desc:'Install the available update' },
+];
+
+function renderTools() {
+  const el = document.getElementById('tools-buttons');
+  if (!el || el.dataset.rendered) return;
+  el.innerHTML = TOOLS.map(t =>
+    `<button class="btn sm" title="${esc(t.desc)}" onclick="runTool('${t.id}')">${esc(t.label)}</button>`
+  ).join('');
+  el.dataset.rendered = '1';
+}
+
+function runTool(id) {
+  runSSE('/api/tools/run?script=' + encodeURIComponent(id), 'tools-sse');
 }
 
 // ─── SEARCH TAB: portals.yml query editor ────────────────────────────────────

@@ -682,6 +682,95 @@ func saveSettings(settings map[string]interface{}) error {
 	return os.WriteFile(settingsFilePath(), data, 0644)
 }
 
+// ── Background daemon ───────────────────────────────────────────────────────────
+//
+// Auto-evaluates pipeline jobs (filling the Score column on its own) and runs
+// enrichment in the background. Controlled by settings keys:
+//   daemonEnabled     bool   — default true
+//   daemonModel       string — default gemini-3-flash-preview:cloud
+//   daemonIntervalMin number — default 4
+// The toggle lives in settings.json so it persists across restarts.
+
+var (
+	daemonMu     sync.Mutex
+	daemonLastRun    string
+	daemonLastResult string
+	daemonRunning    bool
+)
+
+const defaultDaemonModel = "gemini-3-flash-preview:cloud"
+
+// daemonIsEnabled reports the toggle state; a missing key means ON (default).
+func daemonIsEnabled(settings map[string]interface{}) bool {
+	if v, ok := settings["daemonEnabled"].(bool); ok {
+		return v
+	}
+	return true
+}
+
+// lastLine returns the last non-empty line of s (for compact status messages).
+func lastLine(s string) string {
+	lines := strings.Split(strings.TrimSpace(s), "\n")
+	for i := len(lines) - 1; i >= 0; i-- {
+		if t := strings.TrimSpace(lines[i]); t != "" {
+			return t
+		}
+	}
+	return ""
+}
+
+// daemonTick evaluates the next unevaluated job, or — if the queue is empty —
+// enriches one more company.
+func daemonTick() {
+	daemonMu.Lock()
+	if daemonRunning {
+		daemonMu.Unlock()
+		return // previous tick still running; skip
+	}
+	daemonRunning = true
+	daemonMu.Unlock()
+	defer func() {
+		daemonMu.Lock()
+		daemonRunning = false
+		daemonMu.Unlock()
+	}()
+
+	evalCmd := exec.Command("node", "evaluate.mjs", "--next")
+	evalCmd.Dir = rootPath
+	out, _ := evalCmd.CombinedOutput()
+	text := string(out)
+
+	var result string
+	if strings.Contains(text, "NOTHING_TO_EVALUATE") {
+		enrichCmd := exec.Command("node", "enrich.mjs", "--limit", "1", "--skip-contacts", "--headless")
+		enrichCmd.Dir = rootPath
+		eout, _ := enrichCmd.CombinedOutput()
+		result = "enrich · " + lastLine(string(eout))
+	} else {
+		result = "evaluate · " + lastLine(text)
+	}
+
+	daemonMu.Lock()
+	daemonLastRun = time.Now().Format("2006-01-02 15:04:05")
+	daemonLastResult = result
+	daemonMu.Unlock()
+}
+
+// runDaemonLoop is the background worker started once at webui launch.
+func runDaemonLoop() {
+	for {
+		intervalMin := 4
+		if v, ok := loadSettings()["daemonIntervalMin"].(float64); ok && v >= 1 {
+			intervalMin = int(v)
+		}
+		time.Sleep(time.Duration(intervalMin) * time.Minute)
+
+		if daemonIsEnabled(loadSettings()) {
+			daemonTick()
+		}
+	}
+}
+
 // ── AI helpers ────────────────────────────────────────────────────────────────
 
 // jsonToken encodes a string as a JSON string literal (safe for SSE data lines).
@@ -1541,6 +1630,111 @@ Sincerely,
 		}
 	})
 
+	// ── Tools: run any maintenance/utility script (allowlisted) ───────────────
+	// Gives the GUI parity with the CLI — every script is reachable here.
+	toolScripts := map[string][]string{
+		"doctor":            {"doctor.mjs"},
+		"verify-pipeline":   {"verify-pipeline.mjs"},
+		"dedup-tracker":     {"dedup-tracker.mjs"},
+		"normalize-statuses": {"normalize-statuses.mjs"},
+		"merge-tracker":     {"merge-tracker.mjs"},
+		"analyze-patterns":  {"analyze-patterns.mjs"},
+		"followup-cadence":  {"followup-cadence.mjs"},
+		"check-liveness":    {"check-liveness.mjs"},
+		"cv-sync-check":     {"cv-sync-check.mjs"},
+		"generate-pdf":      {"generate-pdf.mjs"},
+		"generate-latex":    {"generate-latex.mjs"},
+		"update-check":      {"update-system.mjs", "check"},
+		"update-apply":      {"update-system.mjs", "apply"},
+		"evaluate-next":     {"evaluate.mjs", "--next"},
+	}
+	mux.HandleFunc("/api/tools/run", func(w http.ResponseWriter, r *http.Request) {
+		name := r.URL.Query().Get("script")
+		scriptArgs, ok := toolScripts[name]
+		if !ok {
+			http.Error(w, "unknown or disallowed script", 400)
+			return
+		}
+		cmd := exec.Command("node", scriptArgs...)
+		cmd.Dir = rootPath
+		sseRun(w, r, cmd)
+	})
+
+	// GET /api/tools/list — names the GUI can offer
+	mux.HandleFunc("/api/tools/list", func(w http.ResponseWriter, r *http.Request) {
+		cors(w)
+		names := make([]string, 0, len(toolScripts))
+		for k := range toolScripts {
+			names = append(names, k)
+		}
+		jsonOK(w, map[string]interface{}{"scripts": names})
+	})
+
+	// ── Background daemon: status + toggle ────────────────────────────────────
+	mux.HandleFunc("/api/daemon/status", func(w http.ResponseWriter, r *http.Request) {
+		cors(w)
+		settings := loadSettings()
+		model, _ := settings["daemonModel"].(string)
+		if model == "" {
+			model = defaultDaemonModel
+		}
+		interval := 4.0
+		if v, ok := settings["daemonIntervalMin"].(float64); ok && v >= 1 {
+			interval = v
+		}
+		daemonMu.Lock()
+		lastRun, lastResult, running := daemonLastRun, daemonLastResult, daemonRunning
+		daemonMu.Unlock()
+		jsonOK(w, map[string]interface{}{
+			"enabled":     daemonIsEnabled(settings),
+			"model":       model,
+			"intervalMin": interval,
+			"running":     running,
+			"lastRun":     lastRun,
+			"lastResult":  lastResult,
+		})
+	})
+
+	// POST /api/daemon/toggle {enabled: bool}  — also runs a tick immediately
+	// when switched on so the user sees activity without waiting an interval.
+	mux.HandleFunc("/api/daemon/toggle", func(w http.ResponseWriter, r *http.Request) {
+		cors(w)
+		if r.Method == http.MethodOptions {
+			return
+		}
+		if r.Method != http.MethodPost {
+			http.Error(w, "POST only", 405)
+			return
+		}
+		var req struct {
+			Enabled bool `json:"enabled"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "invalid JSON: "+err.Error(), 400)
+			return
+		}
+		settings := loadSettings()
+		settings["daemonEnabled"] = req.Enabled
+		if err := saveSettings(settings); err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+		if req.Enabled {
+			go daemonTick()
+		}
+		jsonOK(w, map[string]interface{}{"ok": "true", "enabled": req.Enabled})
+	})
+
+	// POST /api/daemon/run-now — trigger one tick immediately
+	mux.HandleFunc("/api/daemon/run-now", func(w http.ResponseWriter, r *http.Request) {
+		cors(w)
+		if r.Method == http.MethodOptions {
+			return
+		}
+		go daemonTick()
+		jsonOK(w, map[string]string{"ok": "true"})
+	})
+
 	// ── Discover: list available models ───────────────────────────────────────
 	mux.HandleFunc("/api/discover/models", func(w http.ResponseWriter, r *http.Request) {
 		cors(w)
@@ -2112,6 +2306,9 @@ Sincerely,
 
 	// ── Apply engine + login management endpoints ─────────────────────────────
 	registerApplyEndpoints(mux, rootPath)
+
+	// ── Start the background auto-evaluation / enrichment daemon ──────────────
+	go runDaemonLoop()
 
 	addr := fmt.Sprintf(":%d", *portFlag)
 	url := fmt.Sprintf("http://localhost%s", addr)

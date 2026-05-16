@@ -45,6 +45,13 @@ const SKIP_CONTACTS = args.includes('--skip-contacts');
 const companyFlag   = args.indexOf('--company');
 const FILTER        = companyFlag !== -1 ? args[companyFlag + 1]?.toLowerCase() : null;
 
+const limitFlag     = args.indexOf('--limit');
+const LIMIT         = limitFlag !== -1 ? parseInt(args[limitFlag + 1], 10) || null : null;
+
+// --headless: run Chromium without a visible window (used by the background
+// daemon so enrichment doesn't pop browser windows over the user's work).
+const HEADLESS      = args.includes('--headless');
+
 // ── Helpers ──────────────────────────────────────────────────────────
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -225,7 +232,7 @@ function normalizeRole(roleName) {
 /** Launch a headed Chromium with automation flags suppressed */
 async function launchBrowser() {
   return chromium.launch({
-    headless: false,
+    headless: HEADLESS,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -759,6 +766,12 @@ async function main() {
   if (targets.length === 0) {
     console.log('Nothing to enrich. All companies are up to date.');
     return;
+  }
+
+  // --limit caps how many companies are enriched in one run (used by the daemon
+  // to process one company per tick rather than the whole backlog).
+  if (LIMIT && targets.length > LIMIT) {
+    targets = targets.slice(0, LIMIT);
   }
 
   console.log(`\nEnriching ${targets.length} compan${targets.length === 1 ? 'y' : 'ies'}:`);
