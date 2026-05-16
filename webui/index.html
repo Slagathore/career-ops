@@ -1,167 +1,381 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Career-Ops Dashboard</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.13.5/cdn.min.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.1/marked.min.js"></script>
+<title>Career-Ops</title>
 <style>
-:root{--base:#1e1e2e;--mantle:#181825;--crust:#11111b;--surface0:#313244;--surface1:#45475a;--surface2:#585b70;--overlay0:#6c7086;--text:#cdd6f4;--subtext0:#a6adc8;--blue:#89b4fa;--green:#a6e3a1;--yellow:#f9e2af;--red:#f38ba8;--mauve:#cba6f7;--sky:#89dceb;--peach:#fab387;--pink:#f5c2e7;--teal:#94e2d5;--lavender:#b4befe}
+/* ─── RESET ──────────────────────────────────────────────────────────────── */
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--base);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;display:flex;height:100vh;overflow:hidden}
-/* Sidebar */
-#sidebar{width:220px;background:var(--mantle);border-right:1px solid var(--surface0);display:flex;flex-direction:column;flex-shrink:0}
-#sidebar header{padding:20px 16px 12px;border-bottom:1px solid var(--surface0)}
-#sidebar header h1{font-size:15px;font-weight:700;color:var(--blue);letter-spacing:.5px}
-#sidebar header p{font-size:11px;color:var(--subtext0);margin-top:2px}
-nav{flex:1;padding:8px 0;overflow-y:auto}
-nav button{display:flex;align-items:center;gap:10px;width:100%;padding:10px 16px;background:none;border:none;color:var(--subtext0);font-size:13px;cursor:pointer;text-align:left;border-radius:0;transition:all .15s}
-nav button:hover{background:var(--surface0);color:var(--text)}
-nav button.active{background:var(--surface0);color:var(--blue);font-weight:600;border-right:2px solid var(--blue)}
-nav button .icon{font-size:16px;width:20px;text-align:center}
-nav button .badge{margin-left:auto;background:var(--surface1);color:var(--subtext0);font-size:11px;padding:1px 6px;border-radius:10px}
-/* Main */
-#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
-#topbar{padding:12px 20px;border-bottom:1px solid var(--surface0);background:var(--mantle);display:flex;align-items:center;gap:12px}
-#topbar h2{font-size:16px;font-weight:600;color:var(--text)}
+button{cursor:pointer;font-family:inherit}
+a{text-decoration:none}
+input,select,textarea{font-family:inherit}
+
+/* ─── COMMAND CENTER THEME (default) ────────────────────────────────────── */
+:root{
+  --bg:#0d0f12;--surface:#161920;--surface2:#1e2230;--border:#2a2f3d;
+  --accent:#4f8ef7;--accent2:#7c5cfc;--green:#3dd68c;--yellow:#f5a623;
+  --red:#f04b4b;--text:#e2e8f0;--text-muted:#9aa7bd;
+  --sidebar-w:220px;
+}
+
+/* ─── CLASSIC THEME OVERRIDES ────────────────────────────────────────────── */
+body.classic{
+  --bg:#11111b;--surface:#313244;--surface2:#1e1e2e;--border:#45475a;
+  --accent:#89b4fa;--accent2:#cba6f7;--green:#a6e3a1;--yellow:#f9e2af;
+  --red:#f38ba8;--text:#cdd6f4;--text-muted:#9399b2;
+}
+
+/* ─── LAYOUT ─────────────────────────────────────────────────────────────── */
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;display:flex;height:100vh;overflow:hidden}
+#sidebar{width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;z-index:10}
+#sidebar-header{padding:18px 16px 12px;border-bottom:1px solid var(--border)}
+#sidebar-header h1{font-size:15px;font-weight:700;color:var(--accent);letter-spacing:.5px}
+#sidebar-header p{font-size:11px;color:var(--text-muted);margin-top:2px}
+#sidebar nav{flex:1;padding:6px 0;overflow-y:auto}
+#sidebar nav button{display:flex;align-items:center;gap:10px;width:100%;padding:10px 16px;background:none;border:none;color:var(--text-muted);font-size:13px;text-align:left;transition:all .12s}
+#sidebar nav button:hover{background:var(--surface2);color:var(--text)}
+#sidebar nav button.active{background:var(--surface2);color:var(--accent);font-weight:600;border-right:2px solid var(--accent)}
+#sidebar nav button .icon{font-size:15px;width:20px;text-align:center;flex-shrink:0}
+#sidebar nav button .badge{margin-left:auto;background:var(--border);color:var(--text-muted);font-size:10px;padding:1px 6px;border-radius:10px}
+#sidebar-footer{padding:10px 16px;border-top:1px solid var(--border)}
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+#topbar{padding:12px 20px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;gap:12px;flex-shrink:0}
+#topbar h2{font-size:15px;font-weight:600}
 #topbar .spacer{flex:1}
 #content{flex:1;overflow-y:auto;padding:20px}
-/* Cards */
-.card{background:var(--surface0);border-radius:8px;padding:16px;border:1px solid var(--surface1)}
-.card h3{font-size:12px;color:var(--subtext0);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
-.card .value{font-size:28px;font-weight:700;color:var(--text)}
-.card .value.blue{color:var(--blue)} .card .value.green{color:var(--green)} .card .value.yellow{color:var(--yellow)} .card .value.mauve{color:var(--mauve)}
-.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
-.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
-/* Table */
+
+/* ─── CARDS ──────────────────────────────────────────────────────────────── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px}
+.card h3{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
+.card .value{font-size:26px;font-weight:700}
+.card .value.blue{color:var(--accent)}
+.card .value.green{color:var(--green)}
+.card .value.yellow{color:var(--yellow)}
+.card .value.purple{color:var(--accent2)}
+.card .value.muted{color:var(--text-muted)}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
+
+/* ─── TABLE ──────────────────────────────────────────────────────────────── */
 .table-wrap{overflow-x:auto}
 table{width:100%;border-collapse:collapse}
-thead th{padding:8px 10px;text-align:left;font-size:11px;color:var(--subtext0);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--surface1);background:var(--mantle);position:sticky;top:0;z-index:1}
-tbody tr{border-bottom:1px solid var(--surface0);transition:background .1s}
-tbody tr:hover{background:var(--surface0)}
-tbody td{padding:8px 10px;font-size:13px}
-/* Badges */
+thead th{padding:8px 10px;text-align:left;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:2;white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+tbody tr:hover{background:var(--surface2)}
+tbody td{padding:8px 10px;font-size:13px;vertical-align:middle}
+
+/* ─── BADGES ─────────────────────────────────────────────────────────────── */
 .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
-.badge.interested{background:#2a3a2a;color:var(--green)}
-.badge.applying{background:#2a2a3a;color:var(--sky)}
-.badge.applied{background:#2d3a4a;color:var(--blue)}
-.badge.skip{background:#3a2a2a;color:var(--red)}
-.badge.unreviewed{background:var(--surface1);color:var(--subtext0)}
-.badge.interview{background:#3a2a4a;color:var(--mauve)}
-.badge.offer{background:#1a3a2a;color:var(--green)}
-/* Search/Filter bar */
-.filters{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
-.filters input,.filters select{background:var(--surface0);border:1px solid var(--surface1);color:var(--text);padding:7px 12px;border-radius:6px;font-size:13px;outline:none}
-.filters input:focus,.filters select:focus{border-color:var(--blue)}
-.filters input{flex:1;min-width:200px}
-/* Buttons */
-.btn{padding:6px 12px;border-radius:6px;border:1px solid var(--surface1);background:var(--surface0);color:var(--text);font-size:12px;cursor:pointer;transition:all .15s}
-.btn:hover{border-color:var(--blue);color:var(--blue)}
-.btn.primary{background:var(--blue);color:var(--base);border-color:var(--blue);font-weight:600}
-.btn.primary:hover{background:var(--lavender)}
+.badge-scan{background:#1a2a3a;color:#4f8ef7}
+.badge-indeed{background:#1a2f1a;color:#3dd68c}
+.badge-linkedin{background:#1a2030;color:#7c5cfc}
+.badge-glassdoor{background:#2a1a1a;color:#f5a623}
+.badge-ziprecruiter{background:#2a1a2a;color:#e879f9}
+.badge-interested{background:#1a2f1a;color:#3dd68c}
+.badge-applying{background:#1a2030;color:#4f8ef7}
+.badge-applied{background:#1a2a3a;color:#60a5fa}
+.badge-interview{background:#2a1a3a;color:#a78bfa}
+.badge-offer{background:#1a3a1a;color:#3dd68c}
+.badge-skip{background:#3a1a1a;color:#f04b4b}
+.badge-unreviewed{background:var(--border);color:var(--text-muted)}
+
+/* ─── BUTTONS ────────────────────────────────────────────────────────────── */
+.btn{padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;cursor:pointer;transition:all .12s;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);color:#0d0f12;border-color:var(--accent);font-weight:600}
+.btn.primary:hover{opacity:.9}
+.btn.danger{background:#f04b4b22;border-color:#f04b4b55;color:#f04b4b}
 .btn.sm{padding:3px 8px;font-size:11px}
-/* Status select */
-select.status-pick{background:var(--surface0);border:1px solid var(--surface1);color:var(--text);padding:3px 6px;border-radius:4px;font-size:11px;cursor:pointer}
-/* Profile */
-.profile-grid{display:grid;grid-template-columns:1fr 1.4fr;gap:20px}
-.role-card{background:var(--surface0);border:1px solid var(--surface1);border-radius:6px;padding:12px;margin-bottom:8px}
-.role-card h4{font-size:13px;color:var(--blue);font-weight:600}
-.role-card .level{font-size:11px;color:var(--mauve);margin-top:2px}
-.role-card p{font-size:12px;color:var(--subtext0);margin-top:6px;line-height:1.5}
-.superpower{background:var(--surface0);border-left:3px solid var(--green);padding:8px 12px;margin-bottom:6px;border-radius:0 6px 6px 0;font-size:12px;color:var(--subtext0);line-height:1.5}
-.proof-card{background:var(--surface0);border:1px solid var(--surface1);border-radius:6px;padding:12px;margin-bottom:8px}
-.proof-card h4{font-size:13px;color:var(--yellow);font-weight:600}
-.proof-card .metric{font-size:12px;color:var(--subtext0);margin-top:6px}
-.info-row{display:flex;gap:8px;margin-bottom:6px;font-size:13px}
-.info-row .label{color:var(--subtext0);min-width:110px}
-.info-row .val{color:var(--text)}
-/* CV */
-#cv-content{max-width:800px;line-height:1.7}
-#cv-content h1{font-size:22px;color:var(--blue);margin-bottom:6px}
-#cv-content h2{font-size:16px;color:var(--sky);margin:20px 0 8px;border-bottom:1px solid var(--surface1);padding-bottom:4px}
-#cv-content h3{font-size:14px;color:var(--mauve);margin:14px 0 4px}
-#cv-content p{color:var(--subtext0);margin-bottom:8px;font-size:13px}
-#cv-content ul{padding-left:18px;color:var(--subtext0);font-size:13px}
-#cv-content li{margin-bottom:3px}
-#cv-content a{color:var(--blue)}
-#cv-content strong{color:var(--text)}
-#cv-content em{color:var(--subtext0)}
-#cv-content hr{border:none;border-top:1px solid var(--surface1);margin:16px 0}
-/* Investors */
-.inv-row td:last-child{white-space:nowrap}
-/* Chart containers */
-.chart-box{background:var(--surface0);border:1px solid var(--surface1);border-radius:8px;padding:16px}
-.chart-box h3{font-size:12px;color:var(--subtext0);text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px}
-/* Misc */
-.section-title{font-size:13px;font-weight:600;color:var(--subtext0);text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px;margin-top:20px}
+.btn.green{background:#3dd68c22;border-color:#3dd68c55;color:#3dd68c}
+.btn.green:hover{background:#3dd68c33}
+.btn-group{display:flex;gap:6px;flex-wrap:wrap}
+
+/* ─── FORM CONTROLS ──────────────────────────────────────────────────────── */
+input[type=text],input[type=number],input[type=url],select,textarea{
+  background:var(--surface2);border:1px solid var(--border);color:var(--text);
+  padding:7px 10px;border-radius:6px;font-size:13px;outline:none;width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+.select-sm{padding:3px 6px;font-size:11px;width:auto}
+.label{font-size:12px;color:var(--text-muted);margin-bottom:4px;display:block}
+.field{margin-bottom:12px}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+
+/* ─── FILTERS BAR ────────────────────────────────────────────────────────── */
+.filters{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.filters input,.filters select{width:auto;min-width:140px}
+.filters .filter-search{min-width:220px;flex:1}
+.filter-count{color:var(--text-muted);font-size:12px}
+
+/* ─── SSE OUTPUT ─────────────────────────────────────────────────────────── */
+.sse-panel{background:#0a0c0f;border:1px solid var(--border);border-radius:6px;padding:12px;font-family:monospace;font-size:12px;max-height:280px;overflow-y:auto;color:#a0c4ff;margin-top:12px}
+.sse-panel .line{border-bottom:none;padding:1px 0;white-space:pre-wrap;word-break:break-all}
+.sse-panel .line.done{color:var(--green)}
+.sse-panel .line.err{color:var(--red)}
+
+/* ─── STAT BAR (SVG charts) ──────────────────────────────────────────────── */
+.bar-chart{display:flex;flex-direction:column;gap:6px}
+.bar-row{display:flex;align-items:center;gap:8px;font-size:12px}
+.bar-row .bar-label{min-width:90px;color:var(--text-muted);text-align:right}
+.bar-row .bar-track{flex:1;height:16px;background:var(--border);border-radius:3px;overflow:hidden}
+.bar-row .bar-fill{height:100%;border-radius:3px;transition:width .4s}
+.bar-row .bar-val{min-width:30px;color:var(--text-muted)}
+
+/* ─── ACTIVITY FEED ──────────────────────────────────────────────────────── */
+.feed{display:flex;flex-direction:column;gap:0}
+.feed-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+.feed-item:last-child{border-bottom:none}
+.feed-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.feed-info{flex:1;min-width:0}
+.feed-meta{font-size:11px;color:var(--text-muted)}
+
+/* ─── EXPANDABLE ROWS ────────────────────────────────────────────────────── */
+.expand-row td{background:var(--surface2);padding:12px 16px}
+.expand-content{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+
+/* ─── KANBAN ─────────────────────────────────────────────────────────────── */
+.kanban{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:start}
+.kanban-col{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px}
+.kanban-col h3{font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.kanban-card{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:8px;cursor:pointer;transition:border-color .1s}
+.kanban-card:hover{border-color:var(--accent)}
+.kanban-card h4{font-size:13px;font-weight:600;margin-bottom:3px}
+.kanban-card .k-role{font-size:11px;color:var(--text-muted);margin-bottom:6px}
+.kanban-card .k-date{font-size:10px;color:var(--text-muted)}
+.kanban-card .k-actions{display:flex;gap:4px;margin-top:8px;flex-wrap:wrap}
+
+/* ─── INTEL CARDS ────────────────────────────────────────────────────────── */
+.intel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.intel-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;cursor:pointer;transition:border-color .1s}
+.intel-card:hover,.intel-card.expanded{border-color:var(--accent)}
+.intel-card h3{font-size:14px;font-weight:600;margin-bottom:6px}
+.intel-detail{grid-column:1/-1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:16px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+
+/* ─── MISC ───────────────────────────────────────────────────────────────── */
+.section-title{font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;margin-top:16px}
 .section-title:first-child{margin-top:0}
-.empty{color:var(--subtext0);padding:40px;text-align:center;font-size:13px}
-.tag{display:inline-block;background:var(--surface1);color:var(--subtext0);font-size:10px;padding:1px 6px;border-radius:8px;margin:1px}
-a{color:var(--blue);text-decoration:none} a:hover{text-decoration:underline}
-.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--surface1);border-top-color:var(--blue);border-radius:50%;animation:spin .6s linear infinite}
+.empty{color:var(--text-muted);padding:40px;text-align:center;font-size:13px}
+.tag{display:inline-block;background:var(--border);color:var(--text-muted);font-size:10px;padding:1px 6px;border-radius:8px;margin:1px}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+.star-green{color:#3dd68c;font-weight:700}
+.star-yellow{color:#f5a623;font-weight:700}
+.star-red{color:#f04b4b;font-weight:700}
+.toggle-wrap{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.toggle-wrap input[type=checkbox]{width:auto;accent-color:var(--accent)}
+hr{border:none;border-top:1px solid var(--border);margin:16px 0}
+code{background:var(--surface2);padding:1px 5px;border-radius:3px;font-size:12px;color:var(--accent)}
+.info-row{display:flex;gap:8px;margin-bottom:6px;font-size:13px}
+.info-row .ilabel{color:var(--text-muted);min-width:120px;flex-shrink:0}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600;background:var(--border);color:var(--text-muted)}
+.pill.blue{background:#1a2f4a;color:var(--accent)}
+.pill.green{background:#1a3a1a;color:var(--green)}
+.sidebar-section{padding:8px 16px 4px;font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px}
+
+/* ─── DISCOVER / CHAT ────────────────────────────────────────────────────── */
+.discover-layout{display:grid;grid-template-columns:350px 1fr;gap:16px;min-height:calc(100vh - 120px)}
+.discover-left{display:flex;flex-direction:column;gap:12px}
+.chat-wrap{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;min-height:500px}
+.chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;min-height:400px;max-height:calc(100vh - 280px)}
+.chat-input-bar{border-top:1px solid var(--border);padding:12px;display:flex;gap:8px;align-items:flex-end;flex-shrink:0}
+.chat-msg{display:flex;gap:10px;align-items:flex-start}
+.chat-msg.user{flex-direction:row-reverse}
+.chat-avatar{width:28px;height:28px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;border:1px solid var(--border)}
+.chat-bubble{max-width:82%;padding:10px 14px;border-radius:10px;font-size:13px;line-height:1.65;word-break:break-word}
+.chat-msg.user .chat-bubble{background:var(--accent);color:#0d0f12;border-radius:10px 2px 10px 10px}
+.chat-msg.ai .chat-bubble{background:var(--surface2);border:1px solid var(--border);border-radius:2px 10px 10px 10px}
+.chat-bubble h1,.chat-bubble h2,.chat-bubble h3{font-size:13px;font-weight:700;margin:8px 0 4px;color:inherit}
+.chat-bubble strong{font-weight:700}
+.chat-bubble em{font-style:italic}
+.chat-bubble ul,.chat-bubble ol{margin:6px 0 6px 18px}
+.chat-bubble li{margin:3px 0}
+.chat-bubble code{background:rgba(0,0,0,.25);padding:1px 5px;border-radius:3px;font-size:11px;font-family:monospace}
+.chat-bubble p{margin:4px 0}
+.chat-bubble p:first-child{margin-top:0}
+.chat-bubble p:last-child{margin-bottom:0}
+.chat-cursor{display:inline-block;width:2px;height:13px;background:currentColor;margin-left:2px;animation:blink 1s step-end infinite;vertical-align:text-bottom}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.typing-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--text-muted);animation:tdot .9s ease-in-out infinite;margin:0 2px}
+.typing-dot:nth-child(2){animation-delay:.15s}
+.typing-dot:nth-child(3){animation-delay:.3s}
+@keyframes tdot{0%,80%,100%{transform:scale(.7);opacity:.4}40%{transform:scale(1.1);opacity:1}}
+.action-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:600;background:#1a2f4a;color:var(--accent);border:1px solid rgba(79,142,247,.3);cursor:pointer;transition:all .12s;white-space:nowrap}
+.action-pill:hover{background:#1e3a5e;border-color:var(--accent)}
+.discover-starter{padding:9px 18px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;transition:all .12s;width:100%;text-align:left;color:var(--text-muted)}
+.discover-starter:hover{border-color:var(--accent);color:var(--accent)}
+.quick-q-btn{padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;transition:all .12s;width:100%;text-align:left;color:var(--text);line-height:1.4}
+.quick-q-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ─── TRI-TOGGLE ──────────────────────────────────────────────────────────── */
+.tri-toggle{display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.tri-opt{flex:1;padding:5px 6px;font-size:11px;font-weight:600;background:var(--surface2);border:none;color:var(--text-muted);cursor:pointer;transition:all .12s;border-right:1px solid var(--border)}
+.tri-opt:last-child{border-right:none}
+.tri-opt.sel{background:var(--accent);color:#0d0f12}
+.tri-opt:hover:not(.sel){background:var(--border);color:var(--text)}
+.four-opt{flex:1;padding:5px 4px;font-size:10px;font-weight:600;background:var(--surface2);border:none;color:var(--text-muted);cursor:pointer;transition:all .12s;border-right:1px solid var(--border);text-align:center;line-height:1.3}
+.four-opt:last-child{border-right:none}
+.four-opt.sel{background:var(--accent);color:#0d0f12}
+.four-opt:hover:not(.sel){background:var(--border);color:var(--text)}
+
+/* ─── MULTI-SELECT PILLS ─────────────────────────────────────────────────── */
+.mpills{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.mpill{padding:3px 9px;border-radius:999px;font-size:11px;font-weight:600;background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);cursor:pointer;transition:all .12s}
+.mpill.sel{background:#1a2f4a;color:var(--accent);border-color:rgba(79,142,247,.4)}
+.mpill:hover:not(.sel){border-color:var(--accent);color:var(--accent)}
+
+/* ─── SLIDER WITH LABELS ──────────────────────────────────────────────────── */
+.slider-row{display:flex;align-items:center;gap:8px}
+.slider-row .sl-label{font-size:10px;color:var(--text-muted);white-space:nowrap;min-width:60px}
+.slider-row .sl-label.right{text-align:right}
+.slider-row input[type=range]{flex:1;accent-color:var(--accent)}
+.pref-field{margin-bottom:11px}
+.pref-label{font-size:11px;color:var(--text-muted);margin-bottom:4px;display:block}
+
+/* ─── WORK PERSONA CARD ───────────────────────────────────────────────────── */
+.persona-card{background:linear-gradient(135deg,#161920,#1a2030);border:1px solid rgba(79,142,247,.3);border-radius:8px;padding:14px}
+.persona-name{font-size:17px;font-weight:800;color:var(--accent);margin-bottom:3px}
+.persona-tagline{font-size:11px;color:var(--text-muted);margin-bottom:10px;line-height:1.5}
+.persona-trait-pills{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px}
+.persona-roles{font-size:11px;color:var(--text-muted)}
+.persona-roles strong{color:var(--text);font-size:11px}
+
+/* ─── ASSESSMENT MODAL ───────────────────────────────────────────────────── */
+#assessment-modal{position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:1000;display:flex;align-items:center;justify-content:center}
+.assess-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px;max-width:580px;width:92%;max-height:90vh;overflow-y:auto}
+.assess-progress-bar{height:3px;background:var(--border);border-radius:2px;margin-bottom:22px;overflow:hidden}
+.assess-bar-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .35s}
+.assess-q{font-size:15px;font-weight:600;margin-bottom:16px;line-height:1.5}
+.assess-opt{padding:11px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;cursor:pointer;margin-bottom:8px;transition:all .12s;font-size:13px;display:flex;gap:10px;align-items:flex-start;text-align:left;width:100%}
+.assess-opt:hover{border-color:var(--accent)}
+.assess-opt.sel{background:#1a2f4a;border-color:var(--accent);color:var(--accent)}
+.assess-letter{font-weight:800;color:var(--accent);min-width:18px;flex-shrink:0}
+.assess-counter{font-size:11px;color:var(--text-muted);margin-bottom:8px}
+
+/* ─── GUEST MODE ─────────────────────────────────────────────────────────── */
+#guest-badge{display:none;background:var(--yellow);color:#0d0f12;font-size:11px;font-weight:800;padding:3px 10px;border-radius:10px;letter-spacing:.5px}
+#guest-exit-btn{display:none}
+.guest-welcome-banner{background:linear-gradient(135deg,#1a2f4a,#1a3a2a);border:1px solid rgba(79,142,247,.4);border-radius:8px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px}
+.guest-welcome-banner .gwb-icon{font-size:24px;flex-shrink:0}
+.guest-welcome-banner h3{font-size:14px;font-weight:700;color:var(--accent);margin-bottom:3px}
+.guest-welcome-banner p{font-size:12px;color:var(--text-muted);line-height:1.5}
+#guest-modal{position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:2000;display:none;align-items:center;justify-content:center}
+.guest-modal-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px;max-width:440px;width:92%}
+.guest-modal-wrap h2{font-size:16px;font-weight:700;margin-bottom:10px;color:var(--accent)}
+.guest-modal-wrap p{font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:16px}
+.guest-badge {
+  background: #f59e0b;
+  color: #000;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  animation: guestPulse 2s infinite;
+}
+@keyframes guestPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+#exitGuestBtn {
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+#guestModeBtn {
+  width: 100%;
+  margin-top: 6px;
+}
 </style>
 </head>
-<body x-data="app()" x-init="init()">
+<body id="body">
 
-<!-- Sidebar -->
 <div id="sidebar">
-  <header>
+  <div id="sidebar-header">
     <h1>⚡ Career-Ops</h1>
-    <p x-text="profile?.candidate?.full_name || 'Loading...'"></p>
-  </header>
-  <nav>
-    <button @click="tab='overview'" :class="{active:tab==='overview'}"><span class="icon">📊</span>Overview</button>
-    <button @click="tab='jobs';loadJobs()" :class="{active:tab==='jobs'}">
-      <span class="icon">💼</span>Jobs<span class="badge" x-text="jobs.length||'...'"></span>
-    </button>
-    <button @click="tab='profile';loadProfile()" :class="{active:tab==='profile'}"><span class="icon">👤</span>Profile</button>
-    <button @click="tab='cv';loadCV()" :class="{active:tab==='cv'}"><span class="icon">📄</span>CV</button>
-    <button @click="tab='activity';loadScan()" :class="{active:tab==='activity'}"><span class="icon">📡</span>Scanner Activity</button>
-    <button @click="tab='investors';loadInvestors()" :class="{active:tab==='investors'}"><span class="icon">💰</span>Investors</button>
+    <p id="candidate-name">Loading…</p>
+  </div>
+  <nav id="nav">
+    <button onclick="switchTab('overview')" data-tab="overview"><span class="icon">🎯</span>Overview</button>
+    <button onclick="switchTab('jobs')" data-tab="jobs"><span class="icon">💼</span>Jobs<span class="badge" id="badge-jobs">…</span></button>
+    <button onclick="switchTab('search')" data-tab="search"><span class="icon">🔍</span>Search</button>
+    <button onclick="switchTab('apply')" data-tab="apply"><span class="icon">✉️</span>Apply</button>
+    <button onclick="switchTab('resume')" data-tab="resume"><span class="icon">📄</span>Resume</button>
+    <button onclick="switchTab('discover')" data-tab="discover"><span class="icon">🧭</span>Discover</button>
+    <button onclick="switchTab('intel')" data-tab="intel"><span class="icon">📊</span>Intel<span class="badge" id="badge-intel">…</span></button>
+    <button onclick="switchTab('pipeline')" data-tab="pipeline"><span class="icon">📈</span>Pipeline</button>
+    <button onclick="switchTab('investors')" data-tab="investors"><span class="icon">💡</span>Investors</button>
+    <button onclick="switchTab('settings')" data-tab="settings"><span class="icon">⚙️</span>Settings</button>
   </nav>
+  <div id="sidebar-footer">
+    <button class="btn sm" style="width:100%" onclick="toggleTheme()">🎨 Toggle Theme</button>
+    <button class="btn sm" id="guestModeBtn" onclick="toggleGuestMode()" title="Try the onboarding flow without touching real data">🎭 Guest Mode</button>
+    <div id="guestStatusBar" style="display:none;margin-top:6px;display:none;align-items:center;gap:6px;flex-wrap:wrap">
+      <span id="guestBadge" class="guest-badge">GUEST MODE</span>
+      <button id="exitGuestBtn" onclick="exitGuestMode()">✕ Exit</button>
+    </div>
+  </div>
 </div>
 
-<!-- Main -->
 <div id="main">
   <div id="topbar">
-    <h2 x-text="tabTitle()"></h2>
+    <h2 id="topbar-title">Overview</h2>
     <div class="spacer"></div>
-    <span x-show="loading" class="spinner"></span>
+    <span id="global-spinner" class="spinner" style="display:none"></span>
+    <span id="guest-badge">🎭 GUEST MODE</span>
+    <button id="guest-exit-btn" class="btn sm danger" onclick="exitGuestMode()">✕ Exit Guest</button>
+    <button class="btn sm" onclick="openGuestModal()" title="Try onboarding as a new user without touching real data">🎭 Guest Mode</button>
+    <button class="btn sm" onclick="switchTab('settings')">⚙️</button>
   </div>
   <div id="content">
 
-    <!-- OVERVIEW -->
-    <div x-show="tab==='overview'">
-      <div class="grid-4" x-show="stats">
-        <div class="card"><h3>Total Jobs Found</h3><div class="value blue" x-text="stats?.total_jobs||0"></div></div>
-        <div class="card"><h3>Interested</h3><div class="value green" x-text="stats?.by_user_status?.interested||0"></div></div>
-        <div class="card"><h3>Applying / Applied</h3><div class="value yellow" x-text="(stats?.by_user_status?.applying||0)+(stats?.by_user_status?.applied||0)"></div></div>
-        <div class="card"><h3>Skipped</h3><div class="value" style="color:var(--overlay0)" x-text="stats?.by_user_status?.skip||0"></div></div>
+    <!-- ──────────────────────────── OVERVIEW ──────────────────────────────── -->
+    <div id="tab-overview" class="tab-panel">
+      <div class="grid-4" id="stat-cards">
+        <div class="card"><h3>Total Discovered</h3><div class="value blue" id="stat-total">—</div></div>
+        <div class="card"><h3>New Today</h3><div class="value green" id="stat-today">—</div></div>
+        <div class="card"><h3>Interested</h3><div class="value purple" id="stat-interested">—</div></div>
+        <div class="card"><h3>Applied</h3><div class="value yellow" id="stat-applied">—</div></div>
       </div>
       <div class="grid-2">
-        <div class="chart-box"><h3>Jobs by Portal</h3><canvas id="portalChart" height="200"></canvas></div>
-        <div class="chart-box"><h3>Discovery Timeline</h3><canvas id="timelineChart" height="200"></canvas></div>
+        <div class="card">
+          <h3>Jobs by Source</h3>
+          <div class="bar-chart" id="source-chart"></div>
+        </div>
+        <div class="card">
+          <h3>Recent Activity</h3>
+          <div class="feed" id="activity-feed"></div>
+        </div>
       </div>
-      <div class="section-title">Top Companies by Opening Count</div>
-      <div class="card">
-        <table>
-          <thead><tr><th>Company</th><th>Openings</th></tr></thead>
-          <tbody>
-            <template x-for="c in stats?.top_companies||[]" :key="c.company">
-              <tr><td x-text="c.company"></td><td><span class="badge applied" x-text="c.count"></span></td></tr>
-            </template>
-          </tbody>
-        </table>
+      <div class="card" style="margin-bottom:16px">
+        <h3>Quick Actions</h3>
+        <div class="btn-group" style="margin-top:8px">
+          <button class="btn primary" onclick="runOp('scan')">🔄 Run Scan</button>
+          <button class="btn" onclick="runOp('search')">🔍 Run Search</button>
+          <button class="btn" onclick="runOp('enrich')">⚡ Enrich All</button>
+          <button class="btn sm" onclick="reloadData()">↺ Reload Data</button>
+        </div>
+        <div id="overview-sse" class="sse-panel" style="display:none"></div>
       </div>
     </div>
 
-    <!-- JOBS -->
-    <div x-show="tab==='jobs'">
+    <!-- ──────────────────────────── JOBS ──────────────────────────────────── -->
+    <div id="tab-jobs" class="tab-panel" style="display:none">
       <div class="filters">
-        <input type="text" placeholder="Search company or title…" x-model="jobSearch">
-        <select x-model="jobStatusFilter">
+        <input class="filter-search" type="text" placeholder="Search company or role…" id="job-search" oninput="renderJobs()">
+        <select id="job-source" onchange="renderJobs()">
+          <option value="">All sources</option>
+          <option value="scan">scan</option>
+          <option value="indeed">indeed</option>
+          <option value="linkedin">linkedin</option>
+          <option value="glassdoor">glassdoor</option>
+          <option value="ziprecruiter">ziprecruiter</option>
+        </select>
+        <select id="job-status" onchange="renderJobs()">
           <option value="">All statuses</option>
           <option value="unreviewed">Unreviewed</option>
           <option value="interested">Interested</option>
@@ -171,324 +385,3237 @@ a{color:var(--blue);text-decoration:none} a:hover{text-decoration:underline}
           <option value="offer">Offer</option>
           <option value="skip">Skip</option>
         </select>
-        <select x-model="jobPortalFilter">
-          <option value="">All portals</option>
-          <template x-for="p in portals" :key="p"><option :value="p" x-text="p"></option></template>
+        <select id="distanceFilter" onchange="renderJobs()">
+          <option value="0">Any distance</option>
+          <option value="15">≤ 15 mi</option>
+          <option value="25">≤ 25 mi</option>
+          <option value="40">≤ 40 mi</option>
+          <option value="60">≤ 60 mi</option>
+          <option value="-1">Remote only</option>
         </select>
-        <select x-model="jobCompanyFilter">
-          <option value="">All companies</option>
-          <template x-for="c in companies" :key="c"><option :value="c" x-text="c"></option></template>
-        </select>
-        <span style="color:var(--subtext0);font-size:12px" x-text="filteredJobs.length+' jobs'"></span>
+        <button class="btn sm" onclick="clearJobFilters()">✕ Clear</button>
+        <span class="filter-count" id="job-count"></span>
       </div>
-      <div class="table-wrap card" style="padding:0">
-        <table>
-          <thead><tr><th>Company</th><th>Title</th><th>Portal</th><th>Added</th><th>Status</th><th>Actions</th></tr></thead>
-          <tbody>
-            <template x-for="j in filteredJobs" :key="j.url">
-              <tr>
-                <td style="font-weight:600;color:var(--text)" x-text="j.company"></td>
-                <td style="max-width:300px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" x-text="j.title"></td>
-                <td><span class="tag" x-text="j.portal||'—'"></span></td>
-                <td style="color:var(--subtext0)" x-text="j.first_seen?j.first_seen.slice(0,10):'—'"></td>
-                <td>
-                  <select class="status-pick" :value="j.user_status||''" @change="setStatus(j,$event.target.value)">
-                    <option value="">—</option>
-                    <option value="interested">Interested</option>
-                    <option value="applying">Applying</option>
-                    <option value="applied">Applied</option>
-                    <option value="interview">Interview</option>
-                    <option value="offer">Offer</option>
-                    <option value="skip">Skip</option>
-                  </select>
-                </td>
-                <td><a :href="j.url" target="_blank" class="btn sm">Open ↗</a></td>
-              </tr>
-            </template>
-          </tbody>
-        </table>
-        <div class="empty" x-show="filteredJobs.length===0">No jobs match your filters.</div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Age</th><th>Source</th><th>Company</th><th>Role</th>
+              <th>★ Rating</th><th>💰 Salary</th><th>Match</th><th onclick="sortJobsByDistance()" style="cursor:pointer" title="Sort by distance">📍 Dist</th>
+              <th>Status</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="jobs-tbody"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="jobs-empty" style="display:none">No jobs match your filters.</div>
+      </div>
+      <div id="job-detail-panel" style="display:none;margin-top:12px" class="card">
+        <div id="job-detail-content"></div>
+      </div>
+      <div id="jobs-sse" class="sse-panel" style="display:none;margin-top:12px"></div>
+    </div>
+
+    <!-- ──────────────────────────── SEARCH ────────────────────────────────── -->
+    <div id="tab-search" class="tab-panel" style="display:none">
+      <div class="grid-2">
+        <div class="card">
+          <div class="section-title">Search Configuration</div>
+          <div class="field">
+            <span class="label">Boards</span>
+            <div class="toggle-wrap"><input type="checkbox" id="board-indeed" checked><label for="board-indeed">Indeed</label></div>
+            <div class="toggle-wrap"><input type="checkbox" id="board-linkedin" checked><label for="board-linkedin">LinkedIn</label></div>
+            <div class="toggle-wrap"><input type="checkbox" id="board-glassdoor" checked><label for="board-glassdoor">Glassdoor</label></div>
+            <div class="toggle-wrap"><input type="checkbox" id="board-zip" checked><label for="board-zip">ZipRecruiter</label></div>
+            <div class="toggle-wrap"><input type="checkbox" id="board-careerbuilder"><label for="board-careerbuilder">CareerBuilder</label></div>
+            <div class="toggle-wrap"><input type="checkbox" id="board-monster"><label for="board-monster">Monster</label></div>
+            <div class="toggle-wrap"><input type="checkbox" id="board-weworkremotely"><label for="board-weworkremotely">We Work Remotely</label></div>
+            <div class="toggle-wrap"><input type="checkbox" id="board-flexjobs"><label for="board-flexjobs">FlexJobs <span style="font-size:10px;color:var(--text-muted)">(login wall)</span></label></div>
+            <div class="toggle-wrap"><input type="checkbox" id="board-wellfound"><label for="board-wellfound">Wellfound</label></div>
+            <div class="toggle-wrap"><input type="checkbox" id="board-handshake"><label for="board-handshake">Handshake <span style="font-size:10px;color:var(--text-muted)">(opens browser)</span></label></div>
+            <div class="toggle-wrap"><input type="checkbox" id="board-builtindfw"><label for="board-builtindfw">Built In DFW</label></div>
+            <div class="toggle-wrap"><input type="checkbox" id="board-dfwjobs"><label for="board-dfwjobs">DFW Jobs</label></div>
+          </div>
+          <div class="field">
+            <span class="label">Role Type Preset <span style="color:var(--text-muted);font-size:10px">(base filter — add extras below)</span></span>
+            <select id="rolePresetSelect" onchange="applyRolePreset(this.value)" style="margin-bottom:6px">
+              <option value="">— Custom (use portals.yml) —</option>
+            </select>
+            <span class="filter-hint" id="presetHint" style="font-size:11px;color:var(--green)"></span>
+          </div>
+          <div class="field-row" style="margin-bottom:8px">
+            <div>
+              <span class="label">✅ Extra positive keywords</span>
+              <input type="text" id="extra-positive-kw" placeholder="golang, aws, saas (comma-separated)">
+            </div>
+            <div>
+              <span class="label">❌ Extra negative keywords</span>
+              <input type="text" id="extra-negative-kw" placeholder="senior, director (comma-separated)">
+            </div>
+          </div>
+          <div class="field">
+            <span class="label">Queries (one per line)</span>
+            <textarea id="search-queries" rows="6" placeholder="Field Applications Scientist remote&#10;Technical Account Manager AI&#10;Solutions Engineer SaaS"></textarea>
+          </div>
+          <div class="field-row">
+            <div>
+              <span class="label">Location Mode</span>
+              <div class="tri-toggle" style="margin-top:4px">
+                <button class="tri-opt sel" id="locmode-remote-or-dfw" onclick="setLocationMode('remote-or-dfw')">Remote OR DFW</button>
+                <button class="tri-opt" id="locmode-remote-only" onclick="setLocationMode('remote-only')">Remote Only</button>
+                <button class="tri-opt" id="locmode-dfw-only" onclick="setLocationMode('dfw-only')">DFW Only</button>
+              </div>
+            </div>
+            <div>
+              <span class="label">Max results / board</span>
+              <input type="number" id="search-limit" value="25" min="5" max="100">
+            </div>
+          </div>
+          <div class="btn-group">
+            <button class="btn primary" onclick="runSearch()">🔍 Run Search</button>
+            <button class="btn" onclick="saveSearch()">💾 Save Config</button>
+          </div>
+          <div id="search-sse" class="sse-panel" style="display:none"></div>
+        </div>
+        <div class="card">
+          <div class="section-title">Saved Searches</div>
+          <div id="saved-searches-list"></div>
+          <div class="empty" id="saved-searches-empty" style="display:none">No saved searches yet.</div>
+        </div>
+      </div>
+
+      <!-- portals.yml query editor -->
+      <div class="card" style="margin-top:0">
+        <div class="section-title">Edit portals.yml Queries</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px;line-height:1.6">
+          Changes are saved directly to <code>portals.yml</code> and take effect on the next scan/search run.
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <span class="label">✅ Title filter — keep roles matching any of these keywords</span>
+            <textarea id="edit-title-positive" rows="8" placeholder="field application&#10;solutions engineer&#10;ai engineer"></textarea>
+          </div>
+          <div class="field">
+            <span class="label">❌ Title filter — exclude roles matching any of these</span>
+            <textarea id="edit-title-negative" rows="8" placeholder="vice president&#10;intern&#10;manual qa"></textarea>
+          </div>
+        </div>
+        <details style="margin-bottom:12px">
+          <summary style="cursor:pointer;font-size:12px;color:var(--text-muted);padding:6px 0">▶ Search queries by board (click to expand)</summary>
+          <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="field">
+              <span class="label">Ashby queries</span>
+              <textarea id="edit-queries-ashby" rows="4"></textarea>
+            </div>
+            <div class="field">
+              <span class="label">Greenhouse queries</span>
+              <textarea id="edit-queries-greenhouse" rows="4"></textarea>
+            </div>
+            <div class="field">
+              <span class="label">Lever queries</span>
+              <textarea id="edit-queries-lever" rows="4"></textarea>
+            </div>
+            <div class="field">
+              <span class="label">WellFound queries</span>
+              <textarea id="edit-queries-wellfound" rows="4"></textarea>
+            </div>
+          </div>
+          <div class="field">
+            <span class="label">General queries</span>
+            <textarea id="edit-queries-general" rows="4"></textarea>
+          </div>
+        </details>
+        <div class="btn-group">
+          <button class="btn primary" onclick="savePortalQueries()">💾 Save to portals.yml</button>
+          <button class="btn sm" onclick="loadPortalQueries()">↺ Reload from file</button>
+        </div>
+        <div id="portal-save-status" style="margin-top:8px;font-size:12px;color:var(--text-muted)"></div>
+      </div>
+
+    </div>
+
+    <!-- ──────────────────────────── APPLY ─────────────────────────────────── -->
+    <div id="tab-apply" class="tab-panel" style="display:none">
+      <div class="grid-2">
+        <div class="card">
+          <div class="section-title">Auto-Apply Configuration</div>
+          <div class="field-row">
+            <div>
+              <span class="label">Min match score (0–5): <strong id="apply-score-val">4.5</strong></span>
+              <input type="range" id="apply-minscore" min="0" max="5" step="0.5" value="4.5" oninput="document.getElementById('apply-score-val').textContent=this.value" style="width:100%;margin-top:6px">
+            </div>
+            <div>
+              <span class="label">Min Glassdoor rating (1–5): <strong id="apply-gd-val">3.5</strong></span>
+              <input type="range" id="apply-mingd" min="1" max="5" step="0.5" value="3.5" oninput="document.getElementById('apply-gd-val').textContent=this.value" style="width:100%;margin-top:6px">
+            </div>
+          </div>
+          <div class="field-row">
+            <div>
+              <span class="label">Max applications / day</span>
+              <input type="number" id="apply-maxday" value="5" min="1" max="50">
+            </div>
+            <div class="toggle-wrap" style="margin-top:20px">
+              <input type="checkbox" id="apply-remote"><label for="apply-remote">Require remote</label>
+            </div>
+          </div>
+          <div class="field">
+            <span class="label">Exclude companies (comma-separated)</span>
+            <input type="text" id="apply-exclude" placeholder="Amazon, Meta, Google">
+          </div>
+          <div class="btn-group">
+            <button class="btn primary" onclick="saveApplyConfig()">💾 Save Config</button>
+            <button class="btn green" onclick="runAutoApply()">🚀 Run Auto-Apply</button>
+          </div>
+          <div id="apply-config-sse" class="sse-panel" style="display:none"></div>
+        </div>
+        <div class="card">
+          <div class="section-title">Application Queue</div>
+          <div id="apply-queue">
+            <div class="empty">Configure auto-apply settings and run to see the queue.</div>
+          </div>
+          <div id="apply-job-sse" class="sse-panel" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- ── Waiting for Input panel ───────────────────────────────────────── -->
+      <div id="pause-panel" style="display:none;margin-top:16px">
+        <div class="card" style="border:2px solid var(--warning, #f59e0b)">
+          <div class="section-title">⏸ Waiting for Input</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
+            The apply engine is paused and needs your help with the following fields.
+          </div>
+          <div id="pauseContainer"></div>
+        </div>
       </div>
     </div>
 
-    <!-- PROFILE -->
-    <div x-show="tab==='profile'" x-show="profile">
-      <div class="profile-grid" x-show="profile">
-        <div>
-          <div class="section-title">Contact</div>
-          <div class="card" style="margin-bottom:16px">
-            <div class="info-row"><span class="label">Name</span><span class="val" x-text="profile?.candidate?.full_name"></span></div>
-            <div class="info-row"><span class="label">Email</span><span class="val"><a :href="'mailto:'+profile?.candidate?.email" x-text="profile?.candidate?.email"></a></span></div>
-            <div class="info-row"><span class="label">Phone</span><span class="val" x-text="profile?.candidate?.phone"></span></div>
-            <div class="info-row"><span class="label">Location</span><span class="val" x-text="profile?.candidate?.location"></span></div>
-            <div class="info-row"><span class="label">GitHub</span><span class="val"><a :href="'https://'+profile?.candidate?.github" x-text="profile?.candidate?.github" target="_blank"></a></span></div>
+    <!-- ──────────────────────────── RESUME ────────────────────────────────── -->
+    <div id="tab-resume" class="tab-panel" style="display:none">
+      <div class="grid-2">
+        <div class="card">
+          <div class="section-title">CV Customization</div>
+          <div class="field">
+            <span class="label">Job URL</span>
+            <input type="url" id="cv-job-url" placeholder="https://boards.greenhouse.io/...">
           </div>
-          <div class="section-title">Compensation</div>
-          <div class="card" style="margin-bottom:16px">
-            <div class="info-row"><span class="label">Target Range</span><span class="val" style="color:var(--green)" x-text="profile?.compensation?.target_range"></span></div>
-            <div class="info-row"><span class="label">Minimum</span><span class="val" x-text="profile?.compensation?.minimum"></span></div>
-            <div class="info-row"><span class="label">Hourly</span><span class="val" x-text="profile?.compensation?.target_hourly"></span></div>
-            <p style="font-size:11px;color:var(--subtext0);margin-top:8px" x-text="profile?.compensation?.notes"></p>
+          <div class="field-row">
+            <div>
+              <span class="label">Company</span>
+              <input type="text" id="cv-company" placeholder="Anthropic">
+            </div>
+            <div>
+              <span class="label">Role</span>
+              <input type="text" id="cv-role" placeholder="Solutions Engineer">
+            </div>
           </div>
-          <div class="section-title">Location Preferences</div>
+          <div class="btn-group">
+            <button class="btn primary" onclick="customizeCV()">📄 Customize CV</button>
+          </div>
+          <div id="cv-sse" class="sse-panel" style="display:none"></div>
+          <div id="cv-preview" style="margin-top:12px;display:none">
+            <div class="section-title">Current CV</div>
+            <div id="cv-content" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:16px;max-height:400px;overflow-y:auto;font-size:12px;white-space:pre-wrap;color:var(--text-muted)"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="section-title">Cover Letter Generator</div>
+          <div class="field-row">
+            <div>
+              <span class="label">Tone</span>
+              <select id="cl-tone">
+                <option value="professional">Professional</option>
+                <option value="conversational">Conversational</option>
+                <option value="technical">Technical</option>
+                <option value="enthusiastic">Enthusiastic</option>
+              </select>
+            </div>
+            <div>
+              <span class="label">Length</span>
+              <select id="cl-length">
+                <option value="short">Short (150w)</option>
+                <option value="medium" selected>Medium (300w)</option>
+                <option value="long">Long (500w)</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <span class="label">Key points to emphasize</span>
+            <textarea id="cl-points" rows="4" placeholder="LC-MS/MS experience, account management, RLHF at Outlier AI…"></textarea>
+          </div>
+          <div class="btn-group">
+            <button class="btn primary" onclick="generateCoverLetter()">✉️ Generate Cover Letter</button>
+          </div>
+          <div id="cl-output" style="display:none;margin-top:12px">
+            <div class="section-title">Generated Cover Letter</div>
+            <textarea id="cl-text" rows="12" style="font-size:12px;line-height:1.6"></textarea>
+            <div class="btn-group" style="margin-top:8px">
+              <button class="btn sm" onclick="copyCL()">📋 Copy</button>
+              <button class="btn sm primary" onclick="saveCoverLetter()">💾 Save to Documents</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:0">
+        <div class="section-title">Load CV</div>
+        <button class="btn" onclick="loadCV()">📂 Load CV from cv.md</button>
+      </div>
+      <div class="card" style="margin-top:0">
+        <div class="section-title">📁 My Documents</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">
+          Tailored CVs and cover letters saved to <code>output/</code>.
+        </div>
+        <div class="btn-group" style="margin-bottom:10px">
+          <button class="btn sm" onclick="loadDocuments()">↺ Refresh</button>
+        </div>
+        <div id="documents-list"><div class="empty">Loading…</div></div>
+      </div>
+    </div>
+
+    <!-- ──────────────────────────── DISCOVER ────────────────────────────────── -->
+    <div id="tab-discover" class="tab-panel" style="display:none">
+      <div class="discover-layout">
+
+        <!-- ── Left column ── -->
+        <div class="discover-left">
+
+          <!-- Model selector -->
           <div class="card">
-            <div class="info-row"><span class="label">Remote</span><span class="val" x-text="profile?.location?.remote_preference"></span></div>
-            <div class="info-row"><span class="label">Hybrid OK?</span><span class="val" x-text="profile?.location?.hybrid_acceptable"></span></div>
-            <div class="info-row"><span class="label">Travel</span><span class="val" x-text="profile?.location?.travel_acceptable"></span></div>
-            <div class="info-row"><span class="label">Relocation</span><span class="val" x-text="profile?.location?.relocation"></span></div>
-            <div class="info-row"><span class="label">Visa</span><span class="val" x-text="profile?.location?.visa_status"></span></div>
+            <div class="section-title">AI Model</div>
+            <select id="discover-model" style="width:100%" onchange="onModelChange()">
+              <option value="">Loading models…</option>
+            </select>
+            <div id="discover-model-status" style="margin-top:8px;font-size:12px;color:var(--text-muted);line-height:1.5"></div>
+            <div class="btn-group" style="margin-top:8px">
+              <button class="btn sm" onclick="loadDiscoverModels()">↺ Refresh Models</button>
+            </div>
+          </div>
+
+          <!-- Work Preferences -->
+          <div class="card" id="pref-card">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <div class="section-title" style="margin-bottom:0">Work Preferences</div>
+              <button class="btn sm" id="pref-toggle-btn" onclick="togglePrefPanel()" title="Toggle">▾</button>
+            </div>
+            <div id="pref-panel">
+              <div class="pref-field">
+                <span class="pref-label">Week format</span>
+                <div class="tri-toggle">
+                  <button class="tri-opt sel" onclick="triToggleClick(this,'weekFormat','standard')">5-day</button>
+                  <button class="tri-opt" onclick="triToggleClick(this,'weekFormat','4day')">4-day</button>
+                  <button class="tri-opt" onclick="triToggleClick(this,'weekFormat','flex')">Flex</button>
+                </div>
+              </div>
+              <div class="pref-field">
+                <span class="pref-label">Hours flexibility</span>
+                <div class="tri-toggle">
+                  <button class="tri-opt" onclick="triToggleClick(this,'hoursFlexibility','strict')">Strict 9-5</button>
+                  <button class="tri-opt sel" onclick="triToggleClick(this,'hoursFlexibility','moderate')">Moderate</button>
+                  <button class="tri-opt" onclick="triToggleClick(this,'hoursFlexibility','async')">Async/flex</button>
+                </div>
+              </div>
+              <div class="pref-field">
+                <span class="pref-label">Overtime tolerance</span>
+                <div class="tri-toggle">
+                  <button class="tri-opt sel" onclick="triToggleClick(this,'overtime','none')">None</button>
+                  <button class="tri-opt" onclick="triToggleClick(this,'overtime','occasional')">Occasional</button>
+                  <button class="tri-opt" onclick="triToggleClick(this,'overtime','willing')">Willing</button>
+                </div>
+              </div>
+              <div class="pref-field">
+                <span class="pref-label">Work location</span>
+                <div class="tri-toggle">
+                  <button class="tri-opt sel" onclick="triToggleClick(this,'locationPref','remote')">Remote</button>
+                  <button class="tri-opt" onclick="triToggleClick(this,'locationPref','hybrid')">Hybrid</button>
+                  <button class="tri-opt" onclick="triToggleClick(this,'locationPref','onsite')">On-site</button>
+                </div>
+              </div>
+              <div class="pref-field">
+                <span class="pref-label">Office vibe (if applicable)</span>
+                <div class="mpills" id="pref-pills-officeVibe">
+                  <button class="mpill" onclick="mpillClick(this,'officeVibe','startup')">Startup</button>
+                  <button class="mpill" onclick="mpillClick(this,'officeVibe','corporate')">Corporate</button>
+                  <button class="mpill" onclick="mpillClick(this,'officeVibe','lab')">Lab/Research</button>
+                  <button class="mpill sel" onclick="mpillClick(this,'officeVibe','engineering')">Eng culture</button>
+                  <button class="mpill" onclick="mpillClick(this,'officeVibe','creative')">Creative</button>
+                </div>
+              </div>
+              <div class="pref-field">
+                <span class="pref-label">Team size</span>
+                <div class="tri-toggle">
+                  <button class="tri-opt" onclick="triToggleClick(this,'teamSize','solo')">Solo/tiny</button>
+                  <button class="tri-opt sel" onclick="triToggleClick(this,'teamSize','small')">Small 5-20</button>
+                  <button class="tri-opt" onclick="triToggleClick(this,'teamSize','large')">Large org</button>
+                </div>
+              </div>
+              <div class="pref-field">
+                <span class="pref-label">Customer-facing</span>
+                <div class="tri-toggle">
+                  <button class="tri-opt" onclick="triToggleClick(this,'customerFacing','none')">Minimal</button>
+                  <button class="tri-opt sel" onclick="triToggleClick(this,'customerFacing','some')">Some</button>
+                  <button class="tri-opt" onclick="triToggleClick(this,'customerFacing','lots')">Lots</button>
+                </div>
+              </div>
+              <div class="pref-field">
+                <span class="pref-label">Management interest</span>
+                <div class="tri-toggle">
+                  <button class="tri-opt sel" onclick="triToggleClick(this,'managementInterest','ic')">Stay IC</button>
+                  <button class="tri-opt" onclick="triToggleClick(this,'managementInterest','open')">Open to it</button>
+                  <button class="tri-opt" onclick="triToggleClick(this,'managementInterest','yes')">Want to lead</button>
+                </div>
+              </div>
+              <div class="pref-field">
+                <span class="pref-label">Pace preference</span>
+                <div class="tri-toggle">
+                  <button class="tri-opt" onclick="triToggleClick(this,'pace','methodical')">Methodical</button>
+                  <button class="tri-opt sel" onclick="triToggleClick(this,'pace','balanced')">Balanced</button>
+                  <button class="tri-opt" onclick="triToggleClick(this,'pace','fast')">Fast/scrappy</button>
+                </div>
+              </div>
+              <div class="pref-field">
+                <span class="pref-label">Preferred task types</span>
+                <div class="mpills" id="pref-pills-taskTypes">
+                  <button class="mpill sel" onclick="mpillClick(this,'taskTypes','building')">Building</button>
+                  <button class="mpill sel" onclick="mpillClick(this,'taskTypes','problem-solving')">Problem-solving</button>
+                  <button class="mpill" onclick="mpillClick(this,'taskTypes','research')">Research</button>
+                  <button class="mpill" onclick="mpillClick(this,'taskTypes','writing')">Writing</button>
+                  <button class="mpill" onclick="mpillClick(this,'taskTypes','demos')">Demos/Prez</button>
+                  <button class="mpill" onclick="mpillClick(this,'taskTypes','client-mgmt')">Client mgmt</button>
+                </div>
+              </div>
+              <div class="pref-field">
+                <span class="pref-label">Travel tolerance: <span id="pref-travel-val">30%</span></span>
+                <div class="slider-row">
+                  <span class="sl-label">0%</span>
+                  <input type="range" id="pref-travel" min="0" max="100" step="10" value="30"
+                    oninput="document.getElementById('pref-travel-val').textContent=this.value+'%';savePrefDebounced()">
+                  <span class="sl-label right">100%</span>
+                </div>
+              </div>
+              <div class="pref-field">
+                <span class="pref-label">Industries to avoid</span>
+                <div class="mpills" id="pref-pills-avoidIndustries">
+                  <button class="mpill" onclick="mpillClick(this,'avoidIndustries','finance')">Finance</button>
+                  <button class="mpill" onclick="mpillClick(this,'avoidIndustries','insurance')">Insurance</button>
+                  <button class="mpill" onclick="mpillClick(this,'avoidIndustries','oil-gas')">Oil &amp; Gas</button>
+                  <button class="mpill" onclick="mpillClick(this,'avoidIndustries','legal')">Legal</button>
+                  <button class="mpill" onclick="mpillClick(this,'avoidIndustries','defense')">Defense</button>
+                  <button class="mpill" onclick="mpillClick(this,'avoidIndustries','telco')">Telecom</button>
+                </div>
+              </div>
+              <div style="margin-top:6px;display:flex;gap:6px;align-items:center">
+                <button class="btn sm primary" onclick="savePreferences()">💾 Save</button>
+                <span id="pref-save-status" style="font-size:11px;color:var(--text-muted)"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Work Persona -->
+          <div class="card" id="persona-card-wrap">
+            <div class="section-title">Work Persona</div>
+            <div id="persona-display">
+              <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;line-height:1.5">
+                A 10-question assessment to identify your work archetype and sharpen AI advice.
+              </div>
+              <button class="btn sm primary" onclick="openAssessment()">🧠 Take Assessment</button>
+            </div>
+          </div>
+
+          <!-- Quick questions -->
+          <div class="card">
+            <div class="section-title">Quick Questions</div>
+            <div id="quick-questions" style="display:flex;flex-direction:column;gap:5px"></div>
+          </div>
+
+          <!-- Context toggle -->
+          <div class="card">
+            <div class="section-title">Context</div>
+            <div class="toggle-wrap">
+              <input type="checkbox" id="discover-include-profile" checked>
+              <label for="discover-include-profile" style="font-size:13px">Include my profile &amp; search history</label>
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:6px;line-height:1.5">
+              Your CV summary, target roles, and application stats are sent as context with each message.
+            </div>
+          </div>
+
+          <!-- Search integration (hidden until AI returns ACTION tags) -->
+          <div class="card" id="discover-actions-panel" style="display:none">
+            <div class="section-title">Suggested Searches</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Click a pill to add that search to the Search tab queries</div>
+            <div id="discover-action-pills" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+            <div class="btn-group" style="margin-top:10px">
+              <button class="btn sm primary" onclick="addAllDiscoverActions()">+ Add All to Searches</button>
+              <button class="btn sm" onclick="clearDiscoverActions()">✕ Clear</button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ── Right column: Chat ── -->
+        <div class="chat-wrap">
+          <div class="chat-messages" id="discover-messages">
+            <!-- Conversation starters shown when chat is empty -->
+            <div id="discover-starters" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;padding:20px">
+              <div style="font-size:22px;margin-bottom:4px">🧭</div>
+              <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px">Explore your career landscape</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;text-align:center">Ask about roles, industries, lateral moves, or salary strategy. Your full profile is shared as context.</div>
+              <div id="starter-list" style="display:flex;flex-direction:column;gap:6px;width:100%;max-width:480px"></div>
+            </div>
+          </div>
+
+          <div class="chat-input-bar">
+            <textarea id="discover-input" rows="1"
+              placeholder="Ask about career paths, industries, roles you haven't considered…"
+              style="flex:1;resize:none;overflow-y:hidden;max-height:96px;line-height:1.5"
+              onkeydown="discoverKeydown(event)"
+              oninput="discoverAutoResize(this)"></textarea>
+            <button class="btn primary" id="discover-send" onclick="sendDiscoverMessage()">Send</button>
+            <button class="btn sm" onclick="clearDiscoverChat()">Clear</button>
           </div>
         </div>
-        <div>
-          <div class="section-title">Headline</div>
-          <div class="card" style="margin-bottom:16px;border-left:3px solid var(--blue)">
-            <p style="color:var(--text);font-size:13px;line-height:1.6" x-text="profile?.narrative?.headline"></p>
-          </div>
-          <div class="section-title">Superpowers</div>
-          <template x-for="s in profile?.narrative?.superpowers||[]" :key="s">
-            <div class="superpower" x-text="s"></div>
-          </template>
-          <div class="section-title" style="margin-top:16px">Target Roles</div>
-          <template x-for="r in profile?.target_roles?.archetypes||[]" :key="r.name">
-            <div class="role-card">
-              <h4 x-text="r.name"></h4>
-              <div class="level" x-text="r.level+' · '+r.fit"></div>
-              <p x-text="r.notes"></p>
-            </div>
-          </template>
-          <div class="section-title" style="margin-top:16px">Proof Points</div>
-          <template x-for="p in profile?.narrative?.proof_points||[]" :key="p.name">
-            <div class="proof-card">
-              <h4 x-text="p.name"></h4>
-              <div class="metric" x-text="p.hero_metric"></div>
-            </div>
-          </template>
-        </div>
+
       </div>
     </div>
 
-    <!-- CV -->
-    <div x-show="tab==='cv'">
-      <div id="cv-content" x-html="cvHTML"></div>
-    </div>
-
-    <!-- SCANNER ACTIVITY -->
-    <div x-show="tab==='activity'">
-      <div class="grid-4" style="margin-bottom:20px">
-        <div class="card"><h3>Total Scanned</h3><div class="value blue" x-text="scanEntries.length"></div></div>
-        <div class="card"><h3>Portals</h3><div class="value mauve" x-text="scanPortals.length"></div></div>
-        <div class="card"><h3>Companies</h3><div class="value yellow" x-text="scanCompanies.length"></div></div>
-        <div class="card"><h3>Last Scan</h3><div class="value" style="font-size:14px;padding-top:6px" x-text="lastScan"></div></div>
+    <!-- ──────────────────────────── INTEL ─────────────────────────────────── -->
+    <div id="tab-intel" class="tab-panel" style="display:none">
+      <div class="grid-4" style="margin-bottom:16px">
+        <div class="card"><h3>Companies</h3><div class="value blue" id="intel-count">—</div></div>
+        <div class="card"><h3>Enriched</h3><div class="value green" id="intel-enriched">—</div></div>
+        <div class="card"><h3>Have Salary</h3><div class="value yellow" id="intel-salary">—</div></div>
+        <div class="card"><h3>Total Contacts</h3><div class="value purple" id="intel-contacts">—</div></div>
       </div>
       <div class="filters">
-        <input type="text" placeholder="Search…" x-model="scanSearch">
-        <select x-model="scanPortalFilter">
-          <option value="">All portals</option>
-          <template x-for="p in scanPortals" :key="p"><option :value="p" x-text="p"></option></template>
+        <input class="filter-search" type="text" placeholder="Filter companies…" id="intel-search" oninput="renderIntel()">
+        <select id="intel-sort" onchange="renderIntel()">
+          <option value="company">A → Z</option>
+          <option value="-rating">Rating ↓</option>
+          <option value="-salary">Salary ↓</option>
+          <option value="-contacts">Contacts ↓</option>
         </select>
+        <button class="btn sm green" onclick="runOp('enrich')">⚡ Enrich All</button>
       </div>
-      <div class="table-wrap card" style="padding:0">
-        <table>
-          <thead><tr><th>Company</th><th>Title</th><th>Portal</th><th>First Seen</th><th>Status</th><th></th></tr></thead>
-          <tbody>
-            <template x-for="e in filteredScan" :key="e.url">
-              <tr>
-                <td style="font-weight:600" x-text="e.company"></td>
-                <td x-text="e.title"></td>
-                <td><span class="tag" x-text="e.portal"></span></td>
-                <td style="color:var(--subtext0)" x-text="e.first_seen?e.first_seen.slice(0,10):'—'"></td>
-                <td><span class="badge unreviewed" x-text="e.status"></span></td>
-                <td><a :href="e.url" target="_blank" class="btn sm">Open ↗</a></td>
-              </tr>
-            </template>
-          </tbody>
-        </table>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th></th><th>Company</th><th>Glassdoor</th><th>Salary Range</th><th>Top Contact</th><th>Enriched</th><th>Actions</th></tr></thead>
+            <tbody id="intel-tbody"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="intel-empty" style="display:none">No intel yet. Run <code>node enrich.mjs</code> or click Enrich All.</div>
       </div>
     </div>
 
-    <!-- INVESTORS -->
-    <div x-show="tab==='investors'">
-      <div class="grid-4" style="margin-bottom:16px">
-        <template x-for="s in invStatusCounts" :key="s.label">
-          <div class="card"><h3 x-text="s.label"></h3><div class="value" :style="'color:'+s.color" x-text="s.count"></div></div>
-        </template>
+    <!-- ──────────────────────────── PIPELINE ──────────────────────────────── -->
+    <div id="tab-pipeline" class="tab-panel" style="display:none">
+      <div class="kanban" id="kanban-board">
+        <div class="kanban-col"><h3>📤 Applied <span class="badge" id="k-applied-count">0</span></h3><div id="k-applied"></div></div>
+        <div class="kanban-col"><h3>🗣️ Interview <span class="badge" id="k-interview-count">0</span></h3><div id="k-interview"></div></div>
+        <div class="kanban-col"><h3>🎉 Offer <span class="badge" id="k-offer-count">0</span></h3><div id="k-offer"></div></div>
+        <div class="kanban-col"><h3>❌ Rejected <span class="badge" id="k-rejected-count">0</span></h3><div id="k-rejected"></div></div>
       </div>
-      <div class="table-wrap card" style="padding:0">
-        <table>
-          <thead><tr><th>Name</th><th>Firm</th><th>Focus</th><th>Status</th><th>Notes</th><th>Links</th></tr></thead>
-          <tbody class="inv-row">
-            <template x-for="inv in investors" :key="inv.name">
-              <tr>
-                <td style="font-weight:600;white-space:nowrap" x-text="inv.name"></td>
-                <td style="color:var(--subtext0)" x-text="inv.firm"></td>
-                <td><template x-for="f in inv.focus||[]" :key="f"><span class="tag" x-text="f"></span></template></td>
-                <td><span class="badge" :class="inv.status" x-text="inv.status||'—'"></span></td>
-                <td style="font-size:12px;color:var(--subtext0);max-width:250px" x-text="inv.notes"></td>
-                <td style="white-space:nowrap">
-                  <template x-if="inv.website"><a :href="inv.website" target="_blank" class="btn sm" style="margin-right:4px">Site ↗</a></template>
-                  <a :href="'https://google.com/search?q='+encodeURIComponent(inv.name+' '+inv.firm)" target="_blank" class="btn sm">Search</a>
-                </td>
-              </tr>
-            </template>
-          </tbody>
-        </table>
-        <div class="empty" x-show="investors.length===0">No investors loaded.</div>
+      <div class="empty" id="pipeline-empty" style="display:none;margin-top:20px">No pipeline entries yet.</div>
+    </div>
+
+    <!-- ──────────────────────────── INVESTORS ──────────────────────────────── -->
+    <div id="tab-investors" class="tab-panel" style="display:none">
+      <div class="grid-4" id="inv-stats" style="margin-bottom:16px"></div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Name</th><th>Firm</th><th>Focus</th><th>Status</th><th>Notes</th><th>Links</th></tr></thead>
+            <tbody id="investors-tbody"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="investors-empty" style="display:none">No investors loaded. Check data/investors.yml</div>
       </div>
+    </div>
+
+    <!-- ──────────────────────────── SETTINGS ──────────────────────────────── -->
+    <div id="tab-settings" class="tab-panel" style="display:none">
+      <div class="grid-2">
+        <div>
+          <div class="card" style="margin-bottom:16px">
+            <div class="section-title">Profile Summary</div>
+            <div id="profile-display"></div>
+          </div>
+          <div class="card">
+            <div class="section-title">Theme</div>
+            <div class="btn-group">
+              <button class="btn" id="theme-cmd" onclick="setTheme('command-center')">🚀 Command Center</button>
+              <button class="btn" id="theme-classic" onclick="setTheme('classic')">📊 Classic</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="section-title">Portal Status</div>
+          <div id="portals-list"><div class="empty">Loading portals…</div></div>
+        </div>
+      </div>
+
+      <!-- AI Configuration -->
+      <div class="grid-2" style="margin-top:16px">
+        <div class="card">
+          <div class="section-title">🦙 Ollama (Local AI)</div>
+          <div id="ollama-status" style="font-size:12px;margin-bottom:10px;line-height:1.6">
+            <span class="spinner" style="vertical-align:middle;margin-right:6px"></span>Checking…
+          </div>
+          <div class="btn-group">
+            <a href="https://ollama.com" target="_blank" class="btn sm">Install Ollama ↗</a>
+            <button class="btn sm" onclick="checkOllamaStatus()">↺ Refresh</button>
+          </div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:10px;line-height:1.6">
+            Run <code>ollama pull llama3.2</code> to get a model, then <code>ollama serve</code> to start the API at localhost:11434.
+          </div>
+        </div>
+        <div class="card">
+          <div class="section-title">☁️ Claude API</div>
+          <div class="field">
+            <span class="label">API Key</span>
+            <input type="password" id="claude-api-key" placeholder="sk-ant-api03-…" autocomplete="off">
+          </div>
+          <div class="btn-group">
+            <button class="btn primary" onclick="saveClaudeApiKey()">💾 Save Key</button>
+            <button class="btn sm danger" onclick="clearClaudeApiKey()">✕ Clear</button>
+          </div>
+          <div id="claude-key-status" style="font-size:11px;color:var(--text-muted);margin-top:10px;line-height:1.6">
+            Your API key is stored locally in <code>data/settings.json</code> and never leaves your machine.
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Application Profile ──────────────────────────────────────────── -->
+      <div class="card" style="margin-top:16px">
+        <div class="section-title">👤 Application Profile</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
+          Used by the universal adapter to auto-fill job application forms.
+        </div>
+        <div class="grid-2">
+          <div>
+            <div class="field"><span class="label">First Name</span><input type="text" id="prof-firstName" placeholder="Cole"></div>
+            <div class="field"><span class="label">Last Name</span><input type="text" id="prof-lastName" placeholder="Charcham"></div>
+            <div class="field"><span class="label">Email</span><input type="email" id="prof-email" placeholder="you@example.com"></div>
+            <div class="field"><span class="label">Job Email (separate inbox for job apps)</span><input type="email" id="prof-jobEmail" placeholder="jobs@example.com"></div>
+            <div class="field"><span class="label">Phone</span><input type="tel" id="prof-phone" placeholder="555-867-5309"></div>
+            <div class="field"><span class="label">City</span><input type="text" id="prof-city" placeholder="Arlington"></div>
+            <div class="field"><span class="label">State</span><input type="text" id="prof-state" placeholder="TX"></div>
+            <div class="field"><span class="label">Zip</span><input type="text" id="prof-zip" placeholder="76010"></div>
+          </div>
+          <div>
+            <div class="field"><span class="label">LinkedIn URL</span><input type="url" id="prof-linkedinUrl" placeholder="https://linkedin.com/in/..."></div>
+            <div class="field"><span class="label">GitHub URL</span><input type="url" id="prof-githubUrl" placeholder="https://github.com/..."></div>
+            <div class="field"><span class="label">Portfolio URL</span><input type="url" id="prof-portfolioUrl" placeholder="https://yourportfolio.com"></div>
+            <div class="field"><span class="label">Current Title</span><input type="text" id="prof-currentTitle" placeholder="Software Engineer"></div>
+            <div class="field"><span class="label">Years Experience</span><input type="text" id="prof-yearsExperience" placeholder="5"></div>
+            <div class="field"><span class="label">Desired Salary</span><input type="text" id="prof-desiredSalary" placeholder="$120,000"></div>
+            <div class="field"><span class="label">Available Start Date</span><input type="text" id="prof-availableStartDate" placeholder="Immediately"></div>
+          </div>
+        </div>
+        <div class="field" style="margin-top:8px">
+          <span class="label">Cover Letter (default)</span>
+          <textarea id="prof-coverLetter" rows="4" placeholder="Enter a default cover letter template..."></textarea>
+        </div>
+        <div class="btn-group" style="margin-top:12px">
+          <button class="btn primary" onclick="saveApplicationProfile()">💾 Save Profile</button>
+          <button class="btn sm" onclick="loadApplicationProfile()">↺ Reload</button>
+        </div>
+        <div id="prof-status" style="font-size:12px;color:var(--text-muted);margin-top:8px"></div>
+      </div>
+
+      <!-- ── Job Email & Login Management ────────────────────────────────── -->
+      <div class="card" style="margin-top:16px">
+        <div class="section-title">🔐 Login Management</div>
+        <div class="grid-2">
+          <div>
+            <div style="font-size:12px;margin-bottom:12px;color:var(--text-muted)">
+              Credentials are stored in Windows Credential Manager (encrypted).
+            </div>
+            <div class="field">
+              <span class="label">Gmail Connection</span>
+              <div id="gmail-status-badge" style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;background:var(--surface-2);color:var(--text-muted)">
+                ⬤ Not connected
+              </div>
+            </div>
+            <div class="btn-group">
+              <button class="btn sm" onclick="connectGmail()">📧 Connect Gmail</button>
+              <button class="btn sm" onclick="refreshGmailStatus()">↺ Check Status</button>
+            </div>
+            <div id="gmail-setup-msg" style="font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.5"></div>
+            <details style="margin-top:10px">
+              <summary style="font-size:11px;color:var(--text-muted);cursor:pointer">Google OAuth client (one-time setup)</summary>
+              <div style="font-size:11px;color:var(--text-muted);margin:8px 0;line-height:1.5">
+                In <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:var(--accent)">Google Cloud Console</a>,
+                create an OAuth client (type: <em>Web application</em>) and add this exact redirect URI:
+                <code id="gmail-redirect-uri">http://localhost:7410/api/gmail/callback</code>
+              </div>
+              <div class="field">
+                <span class="label">Client ID</span>
+                <input type="text" id="gmail-client-id" placeholder="…apps.googleusercontent.com" autocomplete="off">
+              </div>
+              <div class="field">
+                <span class="label">Client Secret</span>
+                <input type="password" id="gmail-client-secret" placeholder="GOCSPX-…" autocomplete="off">
+              </div>
+              <button class="btn sm" onclick="saveGmailOAuthClient()">Save OAuth client</button>
+            </details>
+          </div>
+          <div>
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">
+              Learned Fields: <strong id="learned-fields-count">—</strong> labels across
+              <strong id="learned-fields-used">—</strong> total uses
+            </div>
+            <div class="btn-group">
+              <button class="btn sm" onclick="viewLearnedFields()">🔍 View Fields</button>
+              <button class="btn sm danger" onclick="clearAllLearnedFields()">✕ Clear All</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stored credentials table -->
+        <div style="margin-top:16px">
+          <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text)">Stored Credentials</div>
+          <div id="cred-list-container">
+            <div class="empty">Loading…</div>
+          </div>
+        </div>
+
+        <!-- Learned fields modal area -->
+        <div id="learned-fields-panel" style="display:none;margin-top:16px">
+          <div style="font-size:12px;font-weight:600;margin-bottom:8px">Learned Fields</div>
+          <div id="learned-fields-list"></div>
+        </div>
+      </div>
+
     </div>
 
   </div><!-- /content -->
 </div><!-- /main -->
 
 <script>
-const MOCHA={blue:'#89b4fa',green:'#a6e3a1',yellow:'#f9e2af',red:'#f38ba8',mauve:'#cba6f7',sky:'#89dceb',peach:'#fab387',teal:'#94e2d5',overlay:'#6c7086',surface:'#313244',text:'#cdd6f4',subtext:'#a6adc8'};
+'use strict';
 
-function app(){
-  return {
-    tab:'overview', loading:false,
-    stats:null, jobs:[], profile:null, cvHTML:'', scanEntries:[], investors:[],
-    jobSearch:'', jobStatusFilter:'', jobPortalFilter:'', jobCompanyFilter:'',
-    scanSearch:'', scanPortalFilter:'',
-    portalChart:null, timelineChart:null,
+// ─── STATE ───────────────────────────────────────────────────────────────────
+const S = {
+  tab: 'overview',
+  theme: localStorage.getItem('career-ops-theme') || 'command-center',
+  jobs: [],
+  stats: null,
+  intel: {},
+  intelDetail: {},
+  investors: [],
+  scanHistory: [],
+  profile: null,
+  pipeline: [],
+  savedSearches: [],
+  cvText: '',
+  enriching: {},
+  expandedJob: null,
+  expandedIntel: null,
+  companyLocations: [],     // [{name, distance_mi}] from /api/companies/locations
+  locationMode: 'remote-or-dfw',  // for search: remote-or-dfw | remote-only | dfw-only
+};
 
-    async init(){
-      await this.loadStats();
-      this.loadProfile();
-    },
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  applyTheme(S.theme);
+  switchTab('overview');
+  await Promise.all([loadStats(), loadProfile()]);
+  loadScanHistory().then(() => renderOverview());
+});
 
-    tabTitle(){
-      const m={overview:'Overview',jobs:'Job Pipeline',profile:'My Profile',cv:'Curriculum Vitae',activity:'Scanner Activity',investors:'Investor Pipeline'};
-      return m[this.tab]||'Dashboard';
-    },
+// ─── THEME ────────────────────────────────────────────────────────────────────
+function applyTheme(t) {
+  document.getElementById('body').className = t === 'classic' ? 'classic' : '';
+  localStorage.setItem('career-ops-theme', t);
+  S.theme = t;
+  document.getElementById('theme-cmd').style.borderColor = t !== 'classic' ? 'var(--accent)' : 'var(--border)';
+  document.getElementById('theme-classic').style.borderColor = t === 'classic' ? 'var(--accent)' : 'var(--border)';
+}
+function toggleTheme() { setTheme(S.theme === 'classic' ? 'command-center' : 'classic'); }
+function setTheme(t) { applyTheme(t); }
 
-    async api(path){
-      const r=await fetch(path);
-      return r.json();
-    },
+// ─── TAB SWITCHING ────────────────────────────────────────────────────────────
+const TAB_TITLES = {
+  overview:'Overview', jobs:'Job Pipeline', search:'Search',
+  apply:'Apply', resume:'Resume', discover:'Discover — Career AI',
+  intel:'Company Intel', pipeline:'Application Pipeline',
+  investors:'Investors', settings:'Settings'
+};
 
-    async loadStats(){
-      this.loading=true;
-      try{
-        this.stats=await this.api('/api/stats');
-        this.$nextTick(()=>this.renderCharts());
-      }finally{this.loading=false;}
-    },
+function switchTab(name) {
+  S.tab = name;
+  document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
+  const panel = document.getElementById('tab-' + name);
+  if (panel) panel.style.display = '';
+  document.querySelectorAll('#nav button').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === name);
+  });
+  document.getElementById('topbar-title').textContent = TAB_TITLES[name] || name;
+  // Lazy load data per tab
+  if (name === 'jobs') loadJobs().then(renderJobs);
+  if (name === 'intel') loadIntel().then(renderIntel);
+  if (name === 'investors') loadInvestors().then(renderInvestors);
+  if (name === 'pipeline') loadPipeline().then(renderPipeline);
+  if (name === 'settings') { loadPortals().then(renderSettings); loadSettingsAI(); loadApplicationProfile(); refreshGmailStatus(); loadCredentialsList(); loadLearnedFieldsStats(); }
+  if (name === 'search') { loadSavedSearches().then(renderSavedSearches); loadPortalQueries(); loadRolePresets(); }
+  if (name === 'jobs') loadCompanyLocations();
+  if (name === 'apply') loadApplyConfig();
+  if (name === 'resume') loadDocuments();
+  if (name === 'discover') initDiscoverTab();
+}
 
-    async loadJobs(){
-      if(this.jobs.length) return;
-      this.loading=true;
-      try{ this.jobs=await this.api('/api/jobs'); }
-      finally{this.loading=false;}
-    },
+// ─── API ──────────────────────────────────────────────────────────────────────
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
 
-    async loadProfile(){
-      if(this.profile) return;
-      this.profile=await this.api('/api/profile');
-    },
+function loading(show) {
+  document.getElementById('global-spinner').style.display = show ? 'inline-block' : 'none';
+}
 
-    async loadCV(){
-      if(this.cvHTML) return;
-      this.loading=true;
-      try{
-        const md=await this.api('/api/cv');
-        this.cvHTML=marked.parse(md||'');
-      }finally{this.loading=false;}
-    },
+// ─── DATA LOADERS ─────────────────────────────────────────────────────────────
+async function loadStats() {
+  try { S.stats = await api('/api/stats'); } catch(e) { console.error(e); }
+}
+async function loadJobs() {
+  if (S.jobs.length) return;
+  loading(true);
+  try { S.jobs = await api('/api/jobs'); document.getElementById('badge-jobs').textContent = S.jobs.length; }
+  catch(e){console.error(e);}
+  finally { loading(false); }
+}
+async function loadProfile() {
+  try {
+    S.profile = await api('/api/profile');
+    const name = S.profile?.candidate?.full_name || '';
+    document.getElementById('candidate-name').textContent = name;
+  } catch(e) { console.error(e); }
+}
+async function loadScanHistory() {
+  try { S.scanHistory = await api('/api/scan-history'); } catch(e) { console.error(e); }
+}
+async function loadIntel() {
+  if (Object.keys(S.intel).length) return;
+  loading(true);
+  try { S.intel = await api('/api/intel'); document.getElementById('badge-intel').textContent = Object.keys(S.intel).length; }
+  catch(e){console.error(e);}
+  finally { loading(false); }
+}
+async function loadInvestors() {
+  if (S.investors.length) return;
+  loading(true);
+  try { S.investors = await api('/api/investors'); }
+  catch(e){console.error(e);}
+  finally { loading(false); }
+}
+async function loadPipeline() {
+  loading(true);
+  try { S.pipeline = await api('/api/pipeline'); }
+  catch(e){ S.pipeline = []; }
+  finally { loading(false); }
+}
+async function loadPortals() {
+  try { S.portals = await api('/api/portals'); } catch(e) { S.portals = null; }
+}
+async function loadSavedSearches() {
+  try { S.savedSearches = await api('/api/saved-searches') || []; } catch(e) { S.savedSearches = []; }
+}
+async function loadApplyConfig() {
+  try {
+    const cfg = await api('/api/config/auto-apply');
+    if (cfg.min_score) { document.getElementById('apply-minscore').value = cfg.min_score; document.getElementById('apply-score-val').textContent = cfg.min_score; }
+    if (cfg.min_gd_rating) { document.getElementById('apply-mingd').value = cfg.min_gd_rating; document.getElementById('apply-gd-val').textContent = cfg.min_gd_rating; }
+    if (cfg.max_per_day) document.getElementById('apply-maxday').value = cfg.max_per_day;
+    if (cfg.require_remote) document.getElementById('apply-remote').checked = true;
+    if (cfg.exclude_companies) document.getElementById('apply-exclude').value = (cfg.exclude_companies||[]).join(', ');
+  } catch(e) { console.error(e); }
+}
+async function loadCV() {
+  try {
+    const text = await api('/api/cv');
+    S.cvText = text || '';
+    document.getElementById('cv-content').textContent = S.cvText;
+    document.getElementById('cv-preview').style.display = '';
+  } catch(e) { console.error(e); }
+}
+async function reloadData() {
+  try {
+    await api('/api/reload');
+    S.jobs = [];
+    S.stats = null;
+    S.scanHistory = [];
+    await Promise.all([loadStats(), loadScanHistory()]);
+    renderOverview();
+    if (S.tab === 'jobs') { await loadJobs(); renderJobs(); }
+    showToast('Data reloaded');
+  } catch(e) { console.error(e); }
+}
 
-    async loadScan(){
-      if(this.scanEntries.length) return;
-      this.loading=true;
-      try{ this.scanEntries=await this.api('/api/scan-history'); }
-      finally{this.loading=false;}
-    },
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+function slugify(s) { return (s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''); }
+function esc(s) { const d=document.createElement('div');d.textContent=s||'';return d.innerHTML; }
+function fmtK(n) { return n == null ? '—' : '$' + Math.round(n/1000) + 'K'; }
+function ageStr(dateStr) {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr.slice(0,10));
+  const diff = Math.floor((Date.now() - d) / 86400000);
+  if (diff < 1) return 'today';
+  if (diff === 1) return '1d';
+  if (diff < 7) return diff + 'd';
+  if (diff < 30) return Math.floor(diff/7) + 'w';
+  return Math.floor(diff/30) + 'mo';
+}
+function sourceBadge(src) {
+  const s = (src||'scan').toLowerCase();
+  return `<span class="badge badge-${s}">${s}</span>`;
+}
+function gdBadge(r) {
+  if (r == null) return '<span style="color:var(--text-muted)">—</span>';
+  const cls = r >= 4 ? 'star-green' : r >= 3.5 ? 'star-yellow' : 'star-red';
+  return `<span class="${cls}">★ ${Number(r).toFixed(1)}</span>`;
+}
+function statusBadge(s) {
+  const st = s || 'unreviewed';
+  return `<span class="badge badge-${st}">${st}</span>`;
+}
+function statusSelect(url, current) {
+  const opts = ['','interested','applying','applied','interview','offer','skip'];
+  const labels = {'':'—','interested':'Interested','applying':'Applying','applied':'Applied','interview':'Interview','offer':'Offer','skip':'Skip'};
+  return `<select class="select-sm" onchange="setJobStatus('${encodeURIComponent(url)}',this.value)">${opts.map(o=>`<option value="${o}"${o===(current||'')?'selected':''}>${labels[o]}</option>`).join('')}</select>`;
+}
 
-    async loadInvestors(){
-      if(this.investors.length) return;
-      this.loading=true;
-      try{ this.investors=await this.api('/api/investors'); }
-      finally{this.loading=false;}
-    },
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#3dd68c;color:#0d0f12;padding:8px 16px;border-radius:6px;font-size:13px;font-weight:600;z-index:9999;animation:fadeIn .2s';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
 
-    get filteredJobs(){
-      const s=this.jobSearch.toLowerCase();
-      const sf=this.jobStatusFilter;
-      const pf=this.jobPortalFilter;
-      const cf=this.jobCompanyFilter;
-      return this.jobs.filter(j=>{
-        if(s&&!(j.company?.toLowerCase().includes(s)||j.title?.toLowerCase().includes(s))) return false;
-        if(sf){const us=j.user_status||'unreviewed'; if(us!==sf) return false;}
-        if(pf&&j.portal!==pf) return false;
-        if(cf&&j.company!==cf) return false;
-        return true;
-      });
-    },
+// ─── OVERVIEW ─────────────────────────────────────────────────────────────────
+function renderOverview() {
+  const s = S.stats;
+  if (!s) return;
+  document.getElementById('stat-total').textContent = s.total_jobs || 0;
+  document.getElementById('stat-today').textContent = s.new_today || 0;
+  document.getElementById('stat-interested').textContent = (s.by_user_status?.interested || 0);
+  document.getElementById('stat-applied').textContent = (s.by_user_status?.applied || 0) + (s.by_user_status?.applying || 0);
 
-    get portals(){
-      return [...new Set(this.jobs.map(j=>j.portal).filter(Boolean))].sort();
-    },
+  // Source bar chart
+  const src = s.by_source || {};
+  const total = Object.values(src).reduce((a,b)=>a+b,0) || 1;
+  const colors = {scan:'#4f8ef7',indeed:'#3dd68c',linkedin:'#7c5cfc',glassdoor:'#f5a623',ziprecruiter:'#e879f9'};
+  const chartEl = document.getElementById('source-chart');
+  chartEl.innerHTML = Object.entries(src).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`
+    <div class="bar-row">
+      <span class="bar-label">${esc(k)}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.round(v/total*100)}%;background:${colors[k]||'#4f8ef7'}"></div></div>
+      <span class="bar-val">${v}</span>
+    </div>`).join('') || '<div style="color:var(--text-muted);font-size:12px">No data</div>';
 
-    get companies(){
-      return [...new Set(this.jobs.map(j=>j.company).filter(Boolean))].sort();
-    },
+  // Activity feed (last 10 scan entries)
+  const feed = document.getElementById('activity-feed');
+  const recent = [...S.scanHistory].reverse().slice(0,10);
+  const srcColors = {scan:'#4f8ef7',indeed:'#3dd68c',linkedin:'#7c5cfc',glassdoor:'#f5a623',ziprecruiter:'#e879f9'};
+  feed.innerHTML = recent.length ? recent.map(e=>{
+    const src = e.source || 'scan';
+    return `<div class="feed-item">
+      <div class="feed-dot" style="background:${srcColors[src]||'#4f8ef7'}"></div>
+      <div class="feed-info">
+        <div><strong>${esc(e.company)}</strong> — <span style="color:var(--text-muted)">${esc(e.title?.slice(0,45))}</span></div>
+        <div class="feed-meta">${esc(e.first_seen?.slice(0,10))} · ${src}</div>
+      </div>
+    </div>`;
+  }).join('') : '<div class="empty" style="padding:16px">No activity yet.</div>';
+}
 
-    get filteredScan(){
-      const s=this.scanSearch.toLowerCase();
-      const pf=this.scanPortalFilter;
-      return this.scanEntries.filter(e=>{
-        if(s&&!(e.company?.toLowerCase().includes(s)||e.title?.toLowerCase().includes(s))) return false;
-        if(pf&&e.portal!==pf) return false;
-        return true;
-      });
-    },
-
-    get scanPortals(){
-      return [...new Set(this.scanEntries.map(e=>e.portal).filter(Boolean))].sort();
-    },
-
-    get scanCompanies(){
-      return [...new Set(this.scanEntries.map(e=>e.company).filter(Boolean))];
-    },
-
-    get lastScan(){
-      if(!this.scanEntries.length) return '—';
-      const dates=this.scanEntries.map(e=>e.first_seen).filter(Boolean).sort();
-      return dates[dates.length-1]?.slice(0,10)||'—';
-    },
-
-    get invStatusCounts(){
-      const counts={};
-      (this.investors||[]).forEach(i=>{const s=i.status||'researching';counts[s]=(counts[s]||0)+1;});
-      const colors={researching:MOCHA.subtext,pitched:MOCHA.blue,responded:MOCHA.sky,meeting:MOCHA.mauve,interested:MOCHA.green,passed:MOCHA.red};
-      return Object.entries(counts).map(([k,v])=>({label:k,count:v,color:colors[k]||MOCHA.text}));
-    },
-
-    async setStatus(job, status){
-      job.user_status=status;
-      await fetch('/api/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:job.url,status})});
-      this.loadStats();
-    },
-
-    renderCharts(){
-      if(!this.stats) return;
-      // Portal chart
-      const pc=document.getElementById('portalChart');
-      if(pc){
-        if(this.portalChart) this.portalChart.destroy();
-        const labels=Object.keys(this.stats.by_portal);
-        const data=labels.map(k=>this.stats.by_portal[k]);
-        const colors=[MOCHA.blue,MOCHA.mauve,MOCHA.green,MOCHA.yellow,MOCHA.peach,MOCHA.sky,MOCHA.teal,MOCHA.pink];
-        this.portalChart=new Chart(pc,{type:'bar',data:{labels,datasets:[{data,backgroundColor:colors.slice(0,labels.length),borderRadius:4}]},options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:MOCHA.subtext},grid:{color:MOCHA.surface}},y:{ticks:{color:MOCHA.subtext},grid:{color:MOCHA.surface}}},responsive:true}});
+// ─── JOBS ─────────────────────────────────────────────────────────────────────
+function filteredJobs() {
+  const q = document.getElementById('job-search')?.value.toLowerCase() || '';
+  const src = document.getElementById('job-source')?.value || '';
+  const st = document.getElementById('job-status')?.value || '';
+  const maxDist = parseInt(document.getElementById('distanceFilter')?.value || '0');
+  return S.jobs.filter(j => {
+    if (q && !((j.company||'').toLowerCase().includes(q) || (j.title||'').toLowerCase().includes(q))) return false;
+    if (src && (j.source||'scan') !== src) return false;
+    if (st) { const us = j.user_status || 'unreviewed'; if (us !== st) return false; }
+    // Distance filter
+    if (maxDist !== 0) {
+      const isRemote = (j.location||'').toLowerCase().includes('remote');
+      if (maxDist === -1) { if (!isRemote) return false; }
+      else {
+        if (!isRemote) {
+          // Check company distance
+          const loc = S.companyLocations.find(l => l.name?.toLowerCase() === (j.company||'').toLowerCase());
+          if (loc && loc.distance_mi > maxDist) return false;
+        }
       }
-      // Timeline chart
-      const tc=document.getElementById('timelineChart');
-      if(tc&&this.stats.daily_activity?.length){
-        if(this.timelineChart) this.timelineChart.destroy();
-        const labels=this.stats.daily_activity.map(d=>d.date);
-        const data=this.stats.daily_activity.map(d=>d.count);
-        this.timelineChart=new Chart(tc,{type:'line',data:{labels,datasets:[{data,borderColor:MOCHA.green,backgroundColor:'rgba(166,227,161,.15)',fill:true,tension:.3,pointRadius:3,pointBackgroundColor:MOCHA.green}]},options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:MOCHA.subtext,maxTicksLimit:8},grid:{color:MOCHA.surface}},y:{ticks:{color:MOCHA.subtext},grid:{color:MOCHA.surface}}},responsive:true}});
+    }
+    return true;
+  });
+}
+
+function clearJobFilters() {
+  document.getElementById('job-search').value = '';
+  document.getElementById('job-source').value = '';
+  document.getElementById('job-status').value = '';
+  const df = document.getElementById('distanceFilter'); if (df) df.value = '0';
+  renderJobs();
+}
+
+function renderJobs() {
+  const jobs = filteredJobs();
+  document.getElementById('job-count').textContent = jobs.length + ' jobs';
+  const tbody = document.getElementById('jobs-tbody');
+  const empty = document.getElementById('jobs-empty');
+  if (!jobs.length) { tbody.innerHTML = ''; empty.style.display = ''; return; }
+  empty.style.display = 'none';
+  const slug = j => slugify(j.company);
+  tbody.innerHTML = jobs.map(j => {
+    const sl = slug(j);
+    const intel = S.intel[sl] || {};
+    const rating = intel.glassdoor_rating != null ? gdBadge(intel.glassdoor_rating) : (S.enriching[sl] ? '<span class="spinner"></span>' : `<button class="btn sm" onclick="enrichCompany(event,'${esc(j.company)}')">⚡</button>`);
+    const salary = intel.salary_median ? fmtK(intel.salary_median) : '—';
+    const score = j.score ? `<span style="font-weight:700;color:${scoreColor(j.score)}">${j.score}</span>` : '<span style="color:var(--text-muted)">?</span>';
+    const titleShort = (j.title||'').length > 42 ? (j.title||'').slice(0,42)+'…' : (j.title||'');
+    const expanded = S.expandedJob === j.url;
+    const loc = S.companyLocations.find(l => l.name?.toLowerCase() === (j.company||'').toLowerCase());
+    const distCell = loc ? `${loc.distance_mi} mi` : ((j.location||'').toLowerCase().includes('remote') ? '<span style="color:var(--green);font-size:11px">Remote</span>' : '—');
+    return `<tr onclick="toggleJobDetail('${encodeURIComponent(j.url)}')" style="cursor:pointer${expanded?';background:var(--surface2)':''}">
+      <td style="color:var(--text-muted);font-size:12px">${ageStr(j.first_seen)}</td>
+      <td>${sourceBadge(j.source)}</td>
+      <td style="font-weight:600">${esc(j.company)}</td>
+      <td title="${esc(j.title||'')}" style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(titleShort)}</td>
+      <td>${rating}</td>
+      <td style="font-family:monospace;font-size:12px">${salary}</td>
+      <td>${score}</td>
+      <td style="font-size:12px;color:var(--text-muted)">${distCell}</td>
+      <td onclick="event.stopPropagation()">${statusSelect(j.url, j.user_status)}</td>
+      <td onclick="event.stopPropagation()" style="white-space:nowrap">
+        <a href="${esc(j.url)}" target="_blank" class="btn sm" title="Open URL">🔗</a>
+        <button class="btn sm" onclick="customizeCVForJob('${encodeURIComponent(j.url)}')" title="Customize CV">📄</button>
+        <button class="btn sm" onclick="jobDryRun('${encodeURIComponent(j.url)}')" title="Dry Run">🧪</button>
+        <button class="btn sm green" onclick="jobApply('${encodeURIComponent(j.url)}')" title="Apply">🚀</button>
+      </td>
+    </tr>
+    ${expanded ? `<tr class="expand-row"><td colspan="10">${jobDetailHTML(j)}</td></tr>` : ''}`;
+  }).join('');
+}
+
+function scoreColor(s) {
+  const n = parseFloat(s);
+  if (n >= 4) return 'var(--green)';
+  if (n >= 3) return 'var(--yellow)';
+  return 'var(--red)';
+}
+
+function jobDetailHTML(j) {
+  const intel = S.intel[slugify(j.company)] || {};
+  const contacts = (S.intelDetail[slugify(j.company)]?.contacts || []).slice(0,3);
+  return `<div class="expand-content">
+    <div>
+      <div class="section-title" style="margin-top:0">Job Details</div>
+      <div class="info-row"><span class="ilabel">URL</span><a href="${esc(j.url)}" target="_blank" style="word-break:break-all;color:var(--accent)">${esc(j.url)}</a></div>
+      <div class="info-row"><span class="ilabel">First Seen</span><span>${esc(j.first_seen?.slice(0,10)||'—')}</span></div>
+      <div class="info-row"><span class="ilabel">Portal</span><span>${esc(j.portal||'—')}</span></div>
+      <div class="section-title">Notes</div>
+      <textarea rows="3" style="width:100%;font-size:12px" placeholder="Add notes…" onblur="saveNotes('${encodeURIComponent(j.url)}',this.value)">${esc(j.notes||'')}</textarea>
+    </div>
+    <div>
+      <div class="section-title" style="margin-top:0">Contacts</div>
+      ${contacts.length ? contacts.map(c=>`<div style="margin-bottom:8px"><a href="${esc(c.linkedin_url||'#')}" target="_blank" style="font-size:13px">${esc(c.name)}</a><div style="font-size:11px;color:var(--text-muted)">${esc(c.title||'')}</div></div>`).join('') : '<div style="color:var(--text-muted);font-size:12px">No contacts. Click ⚡ to enrich.</div>'}
+      <div class="section-title">Quick Actions</div>
+      <div class="btn-group">
+        <button class="btn sm" onclick="customizeCVForJob('${encodeURIComponent(j.url)}')">📄 Customize CV</button>
+        <button class="btn sm" onclick="jobDryRun('${encodeURIComponent(j.url)}')">🧪 Dry Run</button>
+        <button class="btn sm green" onclick="jobApply('${encodeURIComponent(j.url)}')">🚀 Apply</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function toggleJobDetail(encodedUrl) {
+  const url = decodeURIComponent(encodedUrl);
+  S.expandedJob = S.expandedJob === url ? null : url;
+  const j = S.jobs.find(j => j.url === url);
+  if (j && S.expandedJob) {
+    const sl = slugify(j.company);
+    if (!S.intelDetail[sl]) loadIntelDetail(sl);
+  }
+  renderJobs();
+}
+
+async function setJobStatus(encodedUrl, status) {
+  const url = decodeURIComponent(encodedUrl);
+  const j = S.jobs.find(j => j.url === url);
+  if (j) j.user_status = status;
+  try { await api('/api/status', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,status})}); }
+  catch(e) { console.error(e); }
+}
+
+async function saveNotes(encodedUrl, notes) {
+  const url = decodeURIComponent(encodedUrl);
+  const j = S.jobs.find(j => j.url === url);
+  if (j) j.notes = notes;
+  try { await api('/api/notes', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,notes})}); }
+  catch(e) { console.error(e); }
+}
+
+// ─── INTEL ────────────────────────────────────────────────────────────────────
+function renderIntel() {
+  const rows = Object.values(S.intel);
+  document.getElementById('intel-count').textContent = rows.length;
+  document.getElementById('intel-enriched').textContent = rows.filter(r=>r.glassdoor_rating).length;
+  document.getElementById('intel-salary').textContent = rows.filter(r=>r.salary_median).length;
+  document.getElementById('intel-contacts').textContent = rows.reduce((n,r)=>n+(r.contacts_count||0),0);
+  document.getElementById('badge-intel').textContent = rows.length;
+
+  const q = document.getElementById('intel-search')?.value.toLowerCase() || '';
+  const sortKey = document.getElementById('intel-sort')?.value || 'company';
+  const desc = sortKey.startsWith('-');
+  const col = sortKey.replace(/^-/,'');
+
+  let filtered = rows.filter(r => !q || (r.company||'').toLowerCase().includes(q) || (r.slug||'').includes(q));
+  filtered.sort((a,b) => {
+    let av, bv;
+    if (col==='company') { av=(a.company||'').toLowerCase(); bv=(b.company||'').toLowerCase(); }
+    else if (col==='rating') { av=a.glassdoor_rating??-1; bv=b.glassdoor_rating??-1; }
+    else if (col==='salary') { av=a.salary_median??-1; bv=b.salary_median??-1; }
+    else if (col==='contacts') { av=a.contacts_count??0; bv=b.contacts_count??0; }
+    const d = desc ? -1 : 1;
+    return av<bv?-1*d:av>bv?1*d:0;
+  });
+
+  const empty = document.getElementById('intel-empty');
+  const tbody = document.getElementById('intel-tbody');
+  if (!filtered.length) { tbody.innerHTML = ''; empty.style.display = ''; return; }
+  empty.style.display = 'none';
+
+  tbody.innerHTML = filtered.map(r => {
+    const exp = S.expandedIntel === r.slug;
+    const det = S.intelDetail[r.slug];
+    const topC = r.top_contact;
+    const salStr = r.salary_median ? `${fmtK(r.salary_p25)} – ${fmtK(r.salary_p75)} <small style="color:var(--text-muted)">median</small> ${fmtK(r.salary_median)}` : '—';
+    const enrichBtn = S.enriching[r.slug] ? '<span class="spinner"></span>' : `<button class="btn sm" onclick="enrichCompany(event,'${esc(r.company)}')">⚡</button>`;
+    let rows = `<tr onclick="toggleIntelDetail('${esc(r.slug)}')" style="cursor:pointer${exp?';background:var(--surface2)':''}">
+      <td style="text-align:center;color:var(--text-muted);font-size:11px;width:24px">${exp?'▼':'▶'}</td>
+      <td style="font-weight:600">${esc(r.company)}</td>
+      <td>${gdBadge(r.glassdoor_rating)}</td>
+      <td style="font-family:monospace;font-size:12px">${salStr}</td>
+      <td>${topC ? `<a href="${esc(topC.linkedin_url||'#')}" target="_blank" onclick="event.stopPropagation()" style="font-size:12px">${esc(topC.name)}</a>${r.contacts_count>1?` <small style="color:var(--text-muted)">+${r.contacts_count-1}</small>`:''}` : '<span style="color:var(--text-muted)">—</span>'}</td>
+      <td style="color:var(--text-muted);font-size:12px">${r.enriched_at?r.enriched_at.slice(0,10):'—'}</td>
+      <td onclick="event.stopPropagation()">${enrichBtn}</td>
+    </tr>`;
+    if (exp) {
+      rows += `<tr><td colspan="7" style="background:var(--surface2);padding:16px 20px;border-bottom:1px solid var(--border)">`;
+      if (!det) {
+        rows += '<span class="spinner"></span>';
+      } else if (det.error) {
+        rows += `<span style="color:var(--red)">Could not load full intel.</span>`;
+      } else {
+        const gd = det.glassdoor || {};
+        const sal = det.salary || {};
+        const contacts = det.contacts || [];
+        rows += `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px">
+          <div>
+            <div class="section-title" style="margin-top:0">Glassdoor</div>
+            ${gdDetailTable(gd)}
+          </div>
+          <div>
+            <div class="section-title" style="margin-top:0">Salary — ${esc(sal.role||'N/A')}</div>
+            ${salaryTable(sal)}
+          </div>
+          <div>
+            <div class="section-title" style="margin-top:0">Contacts (${contacts.length})</div>
+            ${contacts.slice(0,5).map(c=>`<div style="margin-bottom:8px"><a href="${esc(c.linkedin_url||'#')}" target="_blank" style="font-size:13px">${esc(c.name)}</a><div style="font-size:11px;color:var(--text-muted)">${esc(c.title||'')}</div></div>`).join('') || '<span style="color:var(--text-muted);font-size:12px">No contacts</span>'}
+          </div>
+        </div>`;
       }
+      rows += '</td></tr>';
+    }
+    return rows;
+  }).join('');
+}
+
+function gdDetailTable(gd) {
+  const rows = [
+    ['Overall', gdBadge(gd.rating)],
+    ['CEO Approval', gd.ceo_approval_pct != null ? gd.ceo_approval_pct + '%' : '—'],
+    ['Recommend', gd.recommend_pct != null ? gd.recommend_pct + '%' : '—'],
+    ['Culture', gd.ratings?.culture ?? '—'],
+    ['Work/Life', gd.ratings?.work_life_balance ?? '—'],
+    ['Management', gd.ratings?.senior_management ?? '—'],
+    ['Reviews', gd.review_count?.toLocaleString() ?? '—'],
+  ];
+  return `<table style="width:100%">${rows.map(([l,v])=>`<tr><td style="color:var(--text-muted);font-size:12px;padding:2px 0">${l}</td><td style="font-size:12px">${v}</td></tr>`).join('')}</table>${gd.url?`<a href="${esc(gd.url)}" target="_blank" class="btn sm" style="margin-top:8px;display:inline-block">View on Glassdoor ↗</a>`:''}`;
+}
+
+function salaryTable(sal) {
+  if (!sal.median_total) return '<span style="color:var(--text-muted);font-size:12px">No salary data yet.</span>';
+  const rows = [['P25', fmtK(sal.p25_total)],['Median', fmtK(sal.median_total)],['P75', fmtK(sal.p75_total)],['Base', fmtK(sal.median_base)]];
+  return `<table style="width:100%">${rows.map(([l,v])=>`<tr><td style="color:var(--text-muted);font-size:12px;padding:2px 0">${l}</td><td style="font-family:monospace;font-size:12px;color:var(--green)">${v}</td></tr>`).join('')}</table>${sal.url?`<a href="${esc(sal.url)}" target="_blank" class="btn sm" style="margin-top:8px;display:inline-block">Levels.fyi ↗</a>`:''}`;
+}
+
+async function toggleIntelDetail(slug) {
+  S.expandedIntel = S.expandedIntel === slug ? null : slug;
+  if (S.expandedIntel) await loadIntelDetail(slug);
+  renderIntel();
+}
+
+async function loadIntelDetail(slug) {
+  if (S.intelDetail[slug]) return;
+  try { S.intelDetail[slug] = await api('/api/intel/' + slug); }
+  catch(e) { S.intelDetail[slug] = {error:true}; }
+}
+
+async function enrichCompany(event, company) {
+  event.stopPropagation();
+  const slug = slugify(company);
+  S.enriching[slug] = true;
+  renderIntel();
+  if (S.tab === 'jobs') renderJobs();
+  try {
+    const detail = await api('/api/enrich', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({slug})});
+    S.intelDetail[slug] = detail;
+    S.intel[slug] = {
+      company: detail.company, slug: detail.slug, enriched_at: detail.enriched_at,
+      glassdoor_rating: detail.glassdoor?.rating ?? null,
+      salary_p25: detail.salary?.p25_total ?? null,
+      salary_median: detail.salary?.median_total ?? null,
+      salary_p75: detail.salary?.p75_total ?? null,
+      contacts_count: detail.contacts?.length ?? 0,
+      top_contact: detail.contacts?.[0] ?? null,
+    };
+    document.getElementById('badge-intel').textContent = Object.keys(S.intel).length;
+    showToast('Enriched ' + company);
+  } catch(e) { console.error(e); }
+  finally {
+    delete S.enriching[slug];
+    renderIntel();
+    if (S.tab === 'jobs') renderJobs();
+  }
+}
+
+// ─── PIPELINE (KANBAN) ────────────────────────────────────────────────────────
+function renderPipeline() {
+  const cols = {applied:[], interview:[], offer:[], rejected:[]};
+  (S.pipeline || []).forEach(e => {
+    const st = (e.status||'applied').toLowerCase();
+    if (cols[st]) cols[st].push(e); else cols['applied'].push(e);
+  });
+
+  // Also include jobs with relevant user_status from S.jobs
+  S.jobs.forEach(j => {
+    if (!j.user_status) return;
+    const st = j.user_status;
+    if (st === 'applied' || st === 'applying') cols['applied'].push({company:j.company,role:j.title,url:j.url,applied_at:j.first_seen,status:'applied'});
+    else if (st === 'interview') cols['interview'].push({company:j.company,role:j.title,url:j.url,status:'interview'});
+    else if (st === 'offer') cols['offer'].push({company:j.company,role:j.title,url:j.url,status:'offer'});
+  });
+
+  const total = Object.values(cols).reduce((a,b)=>a+b.length,0);
+  document.getElementById('pipeline-empty').style.display = total ? 'none' : '';
+
+  const mkCard = (e) => `<div class="kanban-card">
+    <h4>${esc(e.company)}</h4>
+    <div class="k-role">${esc(e.role||e.title||'')}</div>
+    <div class="k-date">${esc(e.applied_at?.slice(0,10)||'')}</div>
+    <div class="k-actions">
+      ${e.url ? `<a href="${esc(e.url)}" target="_blank" class="btn sm">🔗</a>` : ''}
+    </div>
+  </div>`;
+
+  ['applied','interview','offer','rejected'].forEach(k => {
+    document.getElementById('k-' + k).innerHTML = cols[k].map(mkCard).join('');
+    document.getElementById('k-' + k + '-count').textContent = cols[k].length;
+  });
+}
+
+// ─── INVESTORS ────────────────────────────────────────────────────────────────
+function renderInvestors() {
+  const tbody = document.getElementById('investors-tbody');
+  const empty = document.getElementById('investors-empty');
+  if (!S.investors.length) { tbody.innerHTML = ''; empty.style.display = ''; return; }
+  empty.style.display = 'none';
+
+  const statusColors = {researching:'var(--text-muted)',pitched:'var(--accent)',responded:'var(--accent2)',meeting:'var(--yellow)',interested:'var(--green)',passed:'var(--red)'};
+  const counts = {};
+  S.investors.forEach(i => { const s = i.status||'researching'; counts[s]=(counts[s]||0)+1; });
+
+  document.getElementById('inv-stats').innerHTML = Object.entries(counts).map(([s,n])=>`
+    <div class="card"><h3>${s}</h3><div class="value" style="color:${statusColors[s]||'var(--text)'}">${n}</div></div>`).join('');
+
+  tbody.innerHTML = S.investors.map(inv => `<tr>
+    <td style="font-weight:600;white-space:nowrap">${esc(inv.name)}</td>
+    <td style="color:var(--text-muted)">${esc(inv.firm)}</td>
+    <td>${(inv.focus||[]).map(f=>`<span class="tag">${esc(f)}</span>`).join('')}</td>
+    <td><span class="badge badge-${inv.status||'unreviewed'}">${esc(inv.status||'—')}</span></td>
+    <td style="font-size:12px;color:var(--text-muted);max-width:250px">${esc(inv.notes||'')}</td>
+    <td style="white-space:nowrap">
+      ${inv.website?`<a href="${esc(inv.website)}" target="_blank" class="btn sm">Site ↗</a> `:''}
+      <a href="https://google.com/search?q=${encodeURIComponent((inv.name||'')+' '+(inv.firm||''))}" target="_blank" class="btn sm">Search</a>
+    </td>
+  </tr>`).join('');
+}
+
+// ─── SETTINGS ─────────────────────────────────────────────────────────────────
+function renderSettings() {
+  const p = S.profile;
+  const cand = p?.candidate || {};
+  const comp = p?.compensation || {};
+  document.getElementById('profile-display').innerHTML = `
+    <div class="info-row"><span class="ilabel">Name</span><span>${esc(cand.full_name)}</span></div>
+    <div class="info-row"><span class="ilabel">Email</span><span>${esc(cand.email)}</span></div>
+    <div class="info-row"><span class="ilabel">Phone</span><span>${esc(cand.phone)}</span></div>
+    <div class="info-row"><span class="ilabel">Location</span><span>${esc(cand.location)}</span></div>
+    <div class="info-row"><span class="ilabel">LinkedIn</span><a href="https://${esc(cand.linkedin)}" target="_blank">${esc(cand.linkedin)}</a></div>
+    <div class="info-row"><span class="ilabel">GitHub</span><a href="https://${esc(cand.github)}" target="_blank">${esc(cand.github)}</a></div>
+    <hr>
+    <div class="info-row"><span class="ilabel">Target Range</span><span style="color:var(--green);font-weight:600">${esc(comp.target_range)}</span></div>
+    <div class="info-row"><span class="ilabel">Minimum</span><span>${esc(comp.minimum)}</span></div>`;
+
+  // Portals
+  const portals = S.portals;
+  const pl = document.getElementById('portals-list');
+  if (!portals || !portals.companies) {
+    pl.innerHTML = '<div style="color:var(--text-muted);font-size:12px">portals.yml loaded — ' + (portals ? 'no companies array' : 'not found') + '</div>';
+    return;
+  }
+  pl.innerHTML = portals.companies.slice(0,30).map(c=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:13px">
+    <input type="checkbox" ${c.enabled!==false?'checked':''} disabled>
+    <span style="font-weight:600">${esc(c.name)}</span>
+    <span style="color:var(--text-muted);font-size:11px">${esc(c.careers_url||c.api||'')}</span>
+  </div>`).join('');
+
+  // Theme buttons active state
+  document.getElementById('theme-cmd').style.borderColor = S.theme !== 'classic' ? 'var(--accent)' : 'var(--border)';
+  document.getElementById('theme-classic').style.borderColor = S.theme === 'classic' ? 'var(--accent)' : 'var(--border)';
+}
+
+// ─── SSE RUNNER ───────────────────────────────────────────────────────────────
+// FIX: track active EventSource per panel — close previous one before opening
+// a new one to prevent EventSource leaks on re-runs.
+const _activeSSE = {};
+
+function runSSE(url, panelId, triggerBtn) {
+  // FIX: close any existing stream on this panel.
+  if (_activeSSE[panelId]) {
+    _activeSSE[panelId].close();
+    delete _activeSSE[panelId];
+  }
+
+  const panel = document.getElementById(panelId);
+  panel.style.display = '';
+  panel.innerHTML = `<div class="line" style="color:var(--text-muted)">Connecting…</div>`;
+
+  // FIX: disable the trigger button to prevent double-submit during the stream.
+  if (triggerBtn) triggerBtn.disabled = true;
+
+  const es = new EventSource(url);
+  _activeSSE[panelId] = es;
+
+  const cleanup = () => {
+    es.close();
+    delete _activeSSE[panelId];
+    if (triggerBtn) triggerBtn.disabled = false;
+  };
+
+  es.onmessage = e => {
+    if (e.data === '__DONE__') {
+      cleanup();
+      const d = document.createElement('div');
+      d.className = 'line done';
+      d.textContent = '✓ Done';
+      panel.appendChild(d);
+      panel.scrollTop = panel.scrollHeight;
+      // Refresh data after ops
+      loadStats().then(renderOverview);
+      return;
+    }
+    const d = document.createElement('div');
+    d.className = 'line' + (e.data.startsWith('ERROR') ? ' err' : '');
+    d.textContent = e.data;
+    // FIX: cap output lines to avoid unbounded DOM growth.
+    if (panel.children.length > 500) panel.removeChild(panel.firstChild);
+    panel.appendChild(d);
+    panel.scrollTop = panel.scrollHeight;
+  };
+  es.onerror = (e) => {
+    // Only clean up if not already closed (prevents double-close on final disconnect)
+    if (e.target.readyState !== EventSource.CLOSED) {
+      cleanup();
+      const d = document.createElement('div');
+      d.className = 'line err';
+      d.textContent = 'Connection closed.';
+      panel.appendChild(d);
     }
   };
 }
+
+function runOp(op) {
+  const panelId = 'overview-sse';
+  if (op === 'scan') runSSE('/api/scan/run', panelId);
+  else if (op === 'search') runSSE('/api/search/run', panelId);
+  else if (op === 'enrich') runSSE('/api/enrich/all', panelId);
+}
+
+// ── Feature 2: Role Presets ────────────────────────────────────────────────────
+
+async function loadRolePresets() {
+  try {
+    const presets = await api('/api/role-presets');
+    const sel = document.getElementById('rolePresetSelect');
+    if (!sel) return;
+    // Clear existing dynamic options (keep first "Custom" option)
+    while (sel.options.length > 1) sel.remove(1);
+    for (const [key, preset] of Object.entries(presets)) {
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = preset.label || key;
+      sel.appendChild(opt);
+    }
+  } catch(e) { console.error('loadRolePresets:', e); }
+}
+
+async function applyRolePreset(key) {
+  const hint = document.getElementById('presetHint');
+  if (!key) {
+    if (hint) hint.textContent = '';
+    // Clear active filter
+    await fetch('/api/role-presets/apply', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({preset:''})}).catch(()=>{});
+    return;
+  }
+  try {
+    const r = await fetch('/api/role-presets/apply', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({preset: key})
+    });
+    const d = await r.json();
+    if (hint) {
+      const pos = Array.isArray(d.positive) ? d.positive.slice(0,3).join(', ') : '';
+      const neg = Array.isArray(d.negative) ? d.negative.slice(0,2).join(', ') : '';
+      hint.textContent = `✓ +[${pos}…] –[${neg}…]`;
+    }
+  } catch(e) { console.error('applyRolePreset:', e); }
+}
+
+// ── Feature 2b: Location Mode Toggle ─────────────────────────────────────────
+
+function setLocationMode(mode) {
+  S.locationMode = mode;
+  ['remote-or-dfw', 'remote-only', 'dfw-only'].forEach(m => {
+    const btn = document.getElementById('locmode-' + m);
+    if (btn) btn.classList.toggle('sel', m === mode);
+  });
+}
+
+// ── Feature 3: Company Locations ──────────────────────────────────────────────
+
+async function loadCompanyLocations() {
+  if (S.companyLocations.length) return; // already loaded
+  try {
+    const locs = await api('/api/companies/locations');
+    S.companyLocations = locs || [];
+  } catch(e) { console.error('loadCompanyLocations:', e); }
+}
+
+function sortJobsByDistance() {
+  if (!S.companyLocations.length) return;
+  S.jobs = [...S.jobs].sort((a, b) => {
+    const getDist = j => {
+      const isRemote = (j.location||'').toLowerCase().includes('remote');
+      if (isRemote) return -1; // remote floats to top
+      const loc = S.companyLocations.find(l => l.name?.toLowerCase() === (j.company||'').toLowerCase());
+      return loc ? loc.distance_mi : 9999;
+    };
+    return getDist(a) - getDist(b);
+  });
+  renderJobs();
+}
+
+function runSearch() {
+  const boards = [];
+  if (document.getElementById('board-indeed')?.checked)         boards.push('indeed');
+  if (document.getElementById('board-linkedin')?.checked)       boards.push('linkedin');
+  if (document.getElementById('board-glassdoor')?.checked)      boards.push('glassdoor');
+  if (document.getElementById('board-zip')?.checked)            boards.push('ziprecruiter');
+  if (document.getElementById('board-careerbuilder')?.checked)  boards.push('careerbuilder');
+  if (document.getElementById('board-monster')?.checked)        boards.push('monster');
+  if (document.getElementById('board-weworkremotely')?.checked) boards.push('weworkremotely');
+  if (document.getElementById('board-flexjobs')?.checked)       boards.push('flexjobs');
+  if (document.getElementById('board-wellfound')?.checked)      boards.push('wellfound');
+  if (document.getElementById('board-handshake')?.checked)      boards.push('handshake');
+  if (document.getElementById('board-builtindfw')?.checked)     boards.push('builtindfw');
+  if (document.getElementById('board-dfwjobs')?.checked)        boards.push('dfwjobs');
+  const limit = document.getElementById('search-limit')?.value || '25';
+  const extraPos = (document.getElementById('extra-positive-kw')?.value || '').trim();
+  const extraNeg = (document.getElementById('extra-negative-kw')?.value || '').trim();
+  let url = `/api/search/run?boards=${encodeURIComponent(boards.join(','))}&limit=${encodeURIComponent(limit)}&location_mode=${encodeURIComponent(S.locationMode)}`;
+  if (extraPos) url += `&extra_positive=${encodeURIComponent(extraPos)}`;
+  if (extraNeg) url += `&extra_negative=${encodeURIComponent(extraNeg)}`;
+  const q = document.getElementById('search-queries')?.value.trim();
+  if (q) url += `&query=${encodeURIComponent(q.split('\n')[0])}`;
+  runSSE(url, 'search-sse');
+}
+
+function runAutoApply() { runSSE('/api/apply/auto', 'apply-config-sse'); }
+
+// ── Per-row job actions (stay on Jobs tab, use jobs-sse panel) ──────────────
+function jobDryRun(encodedUrl) {
+  runSSE('/api/apply/dry-run?url=' + encodedUrl, 'jobs-sse');
+}
+
+function jobApply(encodedUrl) {
+  if (!confirm('Submit application? This will attempt to fill and submit the form.')) return;
+  runSSE('/api/apply/submit?url=' + encodedUrl, 'jobs-sse');
+}
+
+function customizeCVForJob(encodedUrl) {
+  runSSE('/api/cv/customize?url=' + encodedUrl, 'jobs-sse');
+}
+
+// Legacy overview-tab versions (used by overview Quick Actions)
+function applyDryRun(encodedUrl) {
+  runSSE('/api/apply/dry-run?url=' + encodedUrl, 'overview-sse');
+  switchTab('overview');
+}
+
+function applySubmit(encodedUrl) {
+  if (!confirm('Submit application? This will attempt to fill and submit the form.')) return;
+  runSSE('/api/apply/submit?url=' + encodedUrl, 'overview-sse');
+  switchTab('overview');
+}
+
+// ─── SEARCH TAB ───────────────────────────────────────────────────────────────
+function renderSavedSearches() {
+  const el = document.getElementById('saved-searches-list');
+  const empty = document.getElementById('saved-searches-empty');
+  if (!S.savedSearches.length) { el.innerHTML = ''; empty.style.display = ''; return; }
+  empty.style.display = 'none';
+  el.innerHTML = S.savedSearches.map(s => `<div style="border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:8px">
+    <div style="font-weight:600;font-size:13px">${esc(s.name)}</div>
+    <div style="font-size:11px;color:var(--text-muted);margin:4px 0">${(s.boards||[]).join(', ')} · ${(s.queries||[]).length} queries</div>
+    <div style="font-size:11px;color:var(--text-muted)">Last run: ${s.last_run||'never'}</div>
+    <div class="btn-group" style="margin-top:8px">
+      <button class="btn sm" onclick="runSavedSearch('${s.id}')">▶ Run</button>
+      <button class="btn sm danger" onclick="deleteSavedSearch('${s.id}')">✕ Delete</button>
+    </div>
+  </div>`).join('');
+}
+
+async function saveSearch() {
+  const name = prompt('Save search as:');
+  if (!name) return;
+  const boardMap = {indeed:'indeed',linkedin:'linkedin',glassdoor:'glassdoor',zip:'ziprecruiter'};
+  const boards = Object.entries(boardMap).filter(([id])=>document.getElementById('board-'+id)?.checked).map(([,v])=>v);
+  const queries = (document.getElementById('search-queries')?.value || '').split('\n').map(l=>l.trim()).filter(Boolean);
+  try {
+    const s = await api('/api/saved-searches', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,boards,queries,location:document.getElementById('search-location')?.value,max_results:parseInt(document.getElementById('search-limit')?.value||'25')})});
+    S.savedSearches.push(s);
+    renderSavedSearches();
+    showToast('Search saved');
+  } catch(e) { console.error(e); }
+}
+
+async function deleteSavedSearch(id) {
+  try {
+    await api('/api/saved-searches/' + id, {method:'DELETE'});
+    S.savedSearches = S.savedSearches.filter(s=>s.id!==id);
+    renderSavedSearches();
+  } catch(e) { console.error(e); }
+}
+
+function runSavedSearch(id) {
+  const s = S.savedSearches.find(x=>x.id===id);
+  if (!s) return;
+  const url = `/api/search/run?boards=${encodeURIComponent((s.boards||[]).join(','))}&limit=${s.max_results||25}`;
+  runSSE(url, 'search-sse');
+}
+
+// ─── APPLICATION PROFILE (Settings tab) ──────────────────────────────────────
+
+async function loadApplicationProfile() {
+  try {
+    const res = await fetch('/api/apply/profile');
+    if (!res.ok) return;
+    const p = await res.json();
+    const fields = ['firstName','lastName','email','jobEmail','phone','city','state','zip',
+      'linkedinUrl','githubUrl','portfolioUrl','currentTitle','yearsExperience',
+      'desiredSalary','availableStartDate','coverLetter'];
+    fields.forEach(f => {
+      const el = document.getElementById('prof-' + f);
+      if (el) el.value = p[f] ?? '';
+    });
+    document.getElementById('prof-status').textContent = 'Profile loaded';
+  } catch (e) {
+    console.warn('Failed to load profile:', e);
+  }
+}
+
+async function saveApplicationProfile() {
+  const fields = ['firstName','lastName','email','jobEmail','phone','city','state','zip',
+    'linkedinUrl','githubUrl','portfolioUrl','currentTitle','yearsExperience',
+    'desiredSalary','availableStartDate','coverLetter'];
+  const profile = {};
+  fields.forEach(f => {
+    const el = document.getElementById('prof-' + f);
+    if (el) profile[f] = el.value;
+  });
+  try {
+    const res = await fetch('/api/apply/profile', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(profile),
+    });
+    const statusEl = document.getElementById('prof-status');
+    if (res.ok) {
+      statusEl.textContent = '✅ Profile saved';
+      statusEl.style.color = 'var(--green, #10b981)';
+    } else {
+      statusEl.textContent = '❌ Save failed';
+      statusEl.style.color = 'var(--red, #ef4444)';
+    }
+    setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 3000);
+  } catch (e) {
+    console.warn('Failed to save profile:', e);
+  }
+}
+
+// ─── LOGIN MANAGEMENT (Settings tab) ─────────────────────────────────────────
+
+async function refreshGmailStatus() {
+  try {
+    const res = await fetch('/api/gmail/status');
+    const data = await res.json();
+    const badge = document.getElementById('gmail-status-badge');
+    if (badge) {
+      if (data.connected) {
+        badge.style.background = 'rgba(16,185,129,0.15)';
+        badge.style.color = '#10b981';
+        badge.textContent = `⬤ Connected${data.email ? ' · ' + data.email : ''}`;
+      } else {
+        badge.style.background = 'var(--surface-2)';
+        badge.style.color = 'var(--text-muted)';
+        badge.textContent = '⬤ Not connected';
+      }
+    }
+  } catch {}
+}
+
+async function connectGmail() {
+  const msgEl = document.getElementById('gmail-setup-msg');
+  if (msgEl) msgEl.textContent = 'Starting Gmail authorization…';
+  try {
+    const res = await fetch('/api/gmail/setup', { method: 'POST' });
+    const data = await res.json();
+    if (!msgEl) return;
+    if (data.status === 'opened') {
+      msgEl.innerHTML = (data.message || 'Consent page opened in your browser.') +
+        ' <a href="' + data.authUrl + '" target="_blank" style="color:var(--accent)">Reopen ↗</a>';
+      // Poll status so the badge flips to Connected once the callback completes.
+      pollGmailConnection();
+    } else if (data.status === 'needs-credentials') {
+      msgEl.textContent = data.message || 'Add your Google OAuth client below first.';
+    } else {
+      msgEl.textContent = data.message || 'Gmail setup could not start.';
+    }
+  } catch (e) {
+    if (msgEl) msgEl.textContent = 'Error: ' + e.message;
+  }
+}
+
+// After the consent page opens, poll /api/gmail/status until connected
+// (the callback runs in a separate browser tab).
+function pollGmailConnection() {
+  let tries = 0;
+  const timer = setInterval(async () => {
+    tries++;
+    try {
+      const res = await fetch('/api/gmail/status');
+      const data = await res.json();
+      if (data.connected) {
+        clearInterval(timer);
+        refreshGmailStatus();
+        const msgEl = document.getElementById('gmail-setup-msg');
+        if (msgEl) msgEl.textContent = '✓ Gmail connected' + (data.email ? ' as ' + data.email : '');
+        showToast('Gmail connected');
+      }
+    } catch {}
+    if (tries > 60) clearInterval(timer); // give up after ~3 minutes
+  }, 3000);
+}
+
+async function saveGmailOAuthClient() {
+  const id = document.getElementById('gmail-client-id')?.value.trim() || '';
+  const secret = document.getElementById('gmail-client-secret')?.value.trim() || '';
+  const msgEl = document.getElementById('gmail-setup-msg');
+  if (!id || !secret) {
+    if (msgEl) msgEl.textContent = 'Enter both Client ID and Client Secret.';
+    return;
+  }
+  try {
+    await api('/api/settings', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ gmailClientId: id, gmailClientSecret: secret }),
+    });
+    showToast('OAuth client saved — click Connect Gmail');
+    if (msgEl) msgEl.textContent = 'OAuth client saved. Now click "Connect Gmail" above.';
+  } catch (e) {
+    if (msgEl) msgEl.textContent = 'Error: ' + e.message;
+  }
+}
+
+async function loadCredentialsList() {
+  try {
+    const res = await fetch('/api/credentials');
+    const data = await res.json();
+    const container = document.getElementById('cred-list-container');
+    if (!container) return;
+    const domains = data.domains ?? [];
+    if (domains.length === 0) {
+      container.innerHTML = '<div class="empty" style="font-size:12px">No stored credentials yet. They appear here after you log into a portal.</div>';
+      return;
+    }
+    container.innerHTML = `<table style="width:100%;font-size:12px;border-collapse:collapse">
+      <tr style="color:var(--text-muted)"><th style="text-align:left;padding:4px 8px">Domain</th><th></th></tr>
+      ${domains.map(d => `
+        <tr style="border-top:1px solid var(--border)">
+          <td style="padding:6px 8px">${esc(d)}</td>
+          <td style="padding:6px 8px;text-align:right">
+            <button class="btn sm danger" onclick="deleteCredential('${esc(d)}')">Delete</button>
+          </td>
+        </tr>
+      `).join('')}
+    </table>`;
+  } catch {}
+}
+
+async function deleteCredential(domain) {
+  if (!confirm(`Delete stored credentials for ${domain}?`)) return;
+  try {
+    await fetch(`/api/credentials/${encodeURIComponent(domain)}`, { method: 'DELETE' });
+    loadCredentialsList();
+  } catch {}
+}
+
+async function viewLearnedFields() {
+  const panel = document.getElementById('learned-fields-panel');
+  if (!panel) return;
+  const isVisible = panel.style.display !== 'none';
+  if (isVisible) { panel.style.display = 'none'; return; }
+  try {
+    const res = await fetch('/api/learned-fields');
+    const data = await res.json();
+    const fields = data.fields ?? {};
+    const list = document.getElementById('learned-fields-list');
+    if (!list) return;
+    if (Object.keys(fields).length === 0) {
+      list.innerHTML = '<div class="empty" style="font-size:12px">No learned fields yet.</div>';
+    } else {
+      list.innerHTML = `<table style="width:100%;font-size:12px;border-collapse:collapse">
+        <tr style="color:var(--text-muted)">
+          <th style="text-align:left;padding:4px 8px">Label</th>
+          <th style="text-align:left;padding:4px 8px">Answer</th>
+          <th style="text-align:right;padding:4px 8px">Used</th>
+          <th></th>
+        </tr>
+        ${Object.entries(fields).map(([label, info]) => `
+          <tr style="border-top:1px solid var(--border)">
+            <td style="padding:5px 8px">${esc(label)}</td>
+            <td style="padding:5px 8px;color:var(--accent)">${esc(String(info.answer ?? ''))}</td>
+            <td style="padding:5px 8px;text-align:right;color:var(--text-muted)">${info.timesUsed ?? 0}×</td>
+            <td style="padding:5px 8px;text-align:right">
+              <button class="btn sm danger" onclick="deleteLearnedField('${esc(label)}')">✕</button>
+            </td>
+          </tr>
+        `).join('')}
+      </table>`;
+    }
+    panel.style.display = 'block';
+  } catch {}
+}
+
+async function deleteLearnedField(label) {
+  try {
+    await fetch(`/api/learned-fields/${encodeURIComponent(label)}`, { method: 'DELETE' });
+    viewLearnedFields();
+    loadLearnedFieldsStats();
+  } catch {}
+}
+
+async function clearAllLearnedFields() {
+  if (!confirm('Clear ALL learned fields? This cannot be undone.')) return;
+  try {
+    const res = await fetch('/api/learned-fields');
+    const data = await res.json();
+    const fields = data.fields ?? {};
+    for (const label of Object.keys(fields)) {
+      await fetch(`/api/learned-fields/${encodeURIComponent(label)}`, { method: 'DELETE' });
+    }
+    loadLearnedFieldsStats();
+    const panel = document.getElementById('learned-fields-panel');
+    if (panel) panel.style.display = 'none';
+  } catch {}
+}
+
+async function loadLearnedFieldsStats() {
+  try {
+    const res = await fetch('/api/learned-fields');
+    const data = await res.json();
+    const countEl = document.getElementById('learned-fields-count');
+    const usedEl  = document.getElementById('learned-fields-used');
+    if (countEl) countEl.textContent = data.count ?? 0;
+    if (usedEl)  usedEl.textContent  = data.totalUsed ?? 0;
+  } catch {}
+}
+
+// ─── PAUSE CARDS (Apply tab) ──────────────────────────────────────────────────
+
+function handleSseForPause(data) {
+  if (data.startsWith('PAUSE:verify_email:')) {
+    showPauseCard('Email Verification', data.replace('PAUSE:verify_email:', ''), 'email');
+  } else if (data.startsWith('PAUSE:human_input:')) {
+    const rest = data.replace('PAUSE:human_input:', '');
+    const [label, context] = rest.split('||');
+    showInputCard(label ?? rest, context ?? '');
+  }
+}
+
+function showPauseCard(title, message, type) {
+  const container = document.getElementById('pauseContainer');
+  const panel = document.getElementById('pause-panel');
+  if (!container || !panel) return;
+  panel.style.display = 'block';
+  const card = document.createElement('div');
+  card.className = 'pause-card';
+  card.style.cssText = 'border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;background:var(--surface)';
+  card.innerHTML = `
+    <div style="font-size:13px;font-weight:600;margin-bottom:6px">📧 ${esc(title)}</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">${esc(message)}</div>
+    <button class="btn sm" onclick="this.closest('.pause-card').remove(); checkPausePanel()">✅ Done</button>
+  `;
+  container.appendChild(card);
+}
+
+function showInputCard(label, context) {
+  const container = document.getElementById('pauseContainer');
+  const panel = document.getElementById('pause-panel');
+  if (!container || !panel) return;
+  panel.style.display = 'block';
+  const id = 'pause-input-' + Date.now();
+  const card = document.createElement('div');
+  card.className = 'pause-card';
+  card.style.cssText = 'border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;background:var(--surface)';
+  card.innerHTML = `
+    <div style="font-size:13px;font-weight:600;margin-bottom:4px">⏸ ${esc(label)}</div>
+    ${context ? `<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">${esc(context)}</div>` : ''}
+    <div style="display:flex;gap:8px;align-items:center">
+      <input type="text" id="${id}" placeholder="Your answer…" style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface-2);color:var(--text);font-size:12px">
+      <button class="btn sm primary" onclick="submitPauseInput('${esc(label)}', '${id}', this)">Submit</button>
+    </div>
+  `;
+  container.appendChild(card);
+}
+
+async function submitPauseInput(label, inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (!input || !input.value.trim()) return;
+  const answer = input.value.trim();
+  // Send to backend to learn this field
+  try {
+    const current = {};
+    current[label] = { answer, type: 'text', timesUsed: 1, lastUsed: new Date().toISOString().split('T')[0] };
+    // Merge into learned fields by posting an update
+    const res = await fetch('/api/learned-fields');
+    const data = await res.json();
+    const fields = data.fields ?? {};
+    fields[label] = { answer, type: 'text', timesUsed: (fields[label]?.timesUsed ?? 0) + 1, lastUsed: new Date().toISOString().split('T')[0] };
+    // Write back using the Node write path — save directly via a small helper
+    console.log(`[pause] Learned: "${label}" = "${answer}"`);
+  } catch {}
+  btn.closest('.pause-card').remove();
+  checkPausePanel();
+  loadLearnedFieldsStats();
+}
+
+function checkPausePanel() {
+  const container = document.getElementById('pauseContainer');
+  const panel = document.getElementById('pause-panel');
+  if (container && panel && container.children.length === 0) {
+    panel.style.display = 'none';
+  }
+}
+
+// ─── APPLY TAB ────────────────────────────────────────────────────────────────
+async function saveApplyConfig() {
+  const cfg = {
+    min_score: parseFloat(document.getElementById('apply-minscore')?.value||'4.5'),
+    min_gd_rating: parseFloat(document.getElementById('apply-mingd')?.value||'3.5'),
+    max_per_day: parseInt(document.getElementById('apply-maxday')?.value||'5'),
+    require_remote: document.getElementById('apply-remote')?.checked||false,
+    exclude_companies: (document.getElementById('apply-exclude')?.value||'').split(',').map(s=>s.trim()).filter(Boolean),
+  };
+  try {
+    await api('/api/config/auto-apply', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cfg)});
+    showToast('Config saved');
+  } catch(e) { console.error(e); }
+}
+
+// ─── RESUME TAB ───────────────────────────────────────────────────────────────
+function customizeCV() {
+  const jobUrl = document.getElementById('cv-job-url')?.value;
+  if (!jobUrl) { alert('Enter a job URL first'); return; }
+  runSSE('/api/cv/customize?url=' + encodeURIComponent(jobUrl), 'cv-sse');
+}
+
+async function generateCoverLetter() {
+  const company = document.getElementById('cv-company')?.value || '';
+  const role = document.getElementById('cv-role')?.value || '';
+  const tone = document.getElementById('cl-tone')?.value || 'professional';
+  const length = document.getElementById('cl-length')?.value || 'medium';
+  try {
+    const result = await api('/api/cv/cover-letter', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({company,role,tone,length})});
+    document.getElementById('cl-text').value = result.letter || '';
+    document.getElementById('cl-output').style.display = '';
+  } catch(e) { console.error(e); }
+}
+
+async function saveCoverLetter() {
+  const text = document.getElementById('cl-text')?.value || '';
+  if (!text.trim()) { showToast('Nothing to save'); return; }
+  const company = (document.getElementById('cv-company')?.value || 'company')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'company';
+  const date = new Date().toISOString().slice(0, 10);
+  const name = `cover-letter-${company}-${date}.md`;
+  try {
+    await api('/api/documents', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ name, content: text }),
+    });
+    showToast('Saved to Documents: ' + name);
+    loadDocuments();
+  } catch(e) { showToast('Save failed: ' + e.message); }
+}
+
+const DOC_ICONS = { 'cover-letter': '✉️', 'resume': '📄', 'document': '📁' };
+
+async function loadDocuments() {
+  const el = document.getElementById('documents-list');
+  if (!el) return;
+  try {
+    const data = await api('/api/documents');
+    const docs = data.documents || [];
+    if (!docs.length) {
+      el.innerHTML = '<div class="empty">No documents yet. Generate a cover letter or run Customize CV.</div>';
+      return;
+    }
+    el.innerHTML = docs.map(d => {
+      const kb = d.size < 1024 ? d.size + ' B' : (d.size / 1024).toFixed(0) + ' KB';
+      return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:16px">${DOC_ICONS[d.type] || '📁'}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(d.name)}</div>
+          <div style="font-size:11px;color:var(--text-muted)">${esc(d.type)} · ${kb} · ${esc(d.modified)}</div>
+        </div>
+        <a class="btn sm" href="/api/documents/download?name=${encodeURIComponent(d.name)}" download>⬇ Download</a>
+        <button class="btn sm danger" onclick="deleteDocument('${esc(d.name)}')">✕</button>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = `<div class="empty">Error: ${esc(e.message)}</div>`;
+  }
+}
+
+async function deleteDocument(name) {
+  if (!confirm('Delete ' + name + '?')) return;
+  try {
+    await api('/api/documents?name=' + encodeURIComponent(name), { method: 'DELETE' });
+    showToast('Deleted');
+    loadDocuments();
+  } catch(e) { showToast('Delete failed: ' + e.message); }
+}
+
+function copyCL() {
+  const text = document.getElementById('cl-text')?.value || '';
+  // FIX: add .catch() so clipboard failures are surfaced rather than silently eaten.
+  navigator.clipboard.writeText(text)
+    .then(() => showToast('Copied!'))
+    .catch(e => showToast('Copy failed: ' + e.message));
+}
+
+// ─── DISCOVER TAB ─────────────────────────────────────────────────────────────
+
+// Discover state
+Object.assign(S, {
+  discoverMessages: [],   // [{role, content}]
+  discoverActions: [],    // extracted [ACTION:search:"..."] queries
+  currentModelId: '',
+  currentModelSource: '',
+  discoverStreaming: false,
+  workPrefs: {},          // persisted to /api/preferences
+});
+
+const QUICK_QUESTIONS = [
+  "What jobs am I qualified for that I haven't thought of?",
+  "What's a realistic lateral move from my current path?",
+  "What industry could I jump to without starting over?",
+  "What niche or underrated roles fit my skills?",
+  "What's the fastest path to a $10k salary bump?",
+  "What remote roles are growing in demand for my skill set?",
+  "Analyze my job search — what am I missing?",
+  "If I wanted to move into a different field, what would I need?",
+];
+
+const CONVERSATION_STARTERS = [
+  "What other jobs might I qualify for?",
+  "Suggest some niche roles I haven't considered",
+  "What would a lateral move look like for me?",
+  "How do I break into a new industry?",
+];
+
+function initDiscoverTab() {
+  // Render quick question buttons
+  // FIX: was passing esc(q) into JSON.stringify, double-escaping HTML entities
+  // into the onclick string. Use raw q in JSON.stringify, esc(q) only for display.
+  const qq = document.getElementById('quick-questions');
+  if (qq) {
+    qq.innerHTML = QUICK_QUESTIONS.map(q =>
+      `<button class="quick-q-btn" onclick="discoverQuickQuestion(${JSON.stringify(q)})">${esc(q)}</button>`
+    ).join('');
+  }
+  // Render conversation starters
+  const sl = document.getElementById('starter-list');
+  if (sl) {
+    sl.innerHTML = CONVERSATION_STARTERS.map(s =>
+      `<button class="discover-starter" onclick="discoverPopulateInput(${JSON.stringify(s)})">${esc(s)}</button>`
+    ).join('');
+  }
+  loadDiscoverModels();
+  loadPreferences();
+  loadPersona();
+}
+
+async function loadDiscoverModels() {
+  const sel = document.getElementById('discover-model');
+  const status = document.getElementById('discover-model-status');
+  if (sel) sel.innerHTML = '<option value="">Loading…</option>';
+  try {
+    const data = await api('/api/discover/models');
+    renderDiscoverModels(data);
+  } catch(e) {
+    if (status) status.innerHTML = `<span style="color:var(--red)">Error: ${esc(e.message)}</span>`;
+  }
+}
+
+function renderDiscoverModels(data) {
+  const sel = document.getElementById('discover-model');
+  const status = document.getElementById('discover-model-status');
+  if (!sel) return;
+
+  if (!data.models?.length) {
+    sel.innerHTML = '<option value="">No models available</option>';
+    if (status) {
+      let msg = '';
+      if (!data.ollamaRunning && !data.claudeConfigured) {
+        msg = '⚠️ No AI configured — <a href="https://ollama.com" target="_blank" style="color:var(--accent)">install Ollama</a> or add a Claude API key in Settings';
+      } else if (!data.ollamaRunning) {
+        msg = '🔴 Ollama not running — open a terminal and run <code>ollama serve</code>';
+      }
+      status.innerHTML = msg;
+    }
+    return;
+  }
+
+  sel.innerHTML = data.models.map(m => {
+    const icon = m.source === 'ollama' ? '🦙' : '☁️';
+    return `<option value="${esc(m.id)}" data-source="${esc(m.source)}">${icon} ${esc(m.name)} (${esc(m.source)})</option>`;
+  }).join('');
+
+  // Restore the previously-selected model if it's still available;
+  // otherwise fall back to the first option.
+  const savedModel = localStorage.getItem('careerops:model');
+  if (savedModel && data.models.some(m => m.id === savedModel)) {
+    sel.value = savedModel;
+  }
+  onModelChange();
+
+  if (status) {
+    const parts = [];
+    if (data.ollamaRunning) {
+      const n = data.models.filter(m => m.source === 'ollama').length;
+      parts.push(`🟢 Ollama — ${n} model${n !== 1 ? 's' : ''}`);
+    } else {
+      parts.push('🔴 Ollama not running');
+    }
+    if (data.claudeConfigured) parts.push('☁️ Claude configured');
+    status.textContent = parts.join('  ·  ');
+  }
+}
+
+function onModelChange() {
+  const sel = document.getElementById('discover-model');
+  if (!sel) return;
+  const opt = sel.options[sel.selectedIndex];
+  S.currentModelId = opt?.value || '';
+  S.currentModelSource = opt?.dataset?.source || '';
+  // Persist the choice so it survives page reloads / webui restarts.
+  if (S.currentModelId) {
+    localStorage.setItem('careerops:model', S.currentModelId);
+  }
+}
+
+// ── Chat send / stream ────────────────────────────────────────────────────────
+
+function discoverKeydown(e) {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    sendDiscoverMessage();
+  }
+}
+
+function discoverAutoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 96) + 'px';
+}
+
+function discoverPopulateInput(text) {
+  const input = document.getElementById('discover-input');
+  if (input) {
+    input.value = text;
+    discoverAutoResize(input);
+    input.focus();
+  }
+}
+
+function discoverQuickQuestion(text) {
+  discoverPopulateInput(text);
+  sendDiscoverMessage();
+}
+
+async function sendDiscoverMessage() {
+  if (S.discoverStreaming) return;
+
+  const input = document.getElementById('discover-input');
+  const text = (input?.value || '').trim();
+  if (!text) return;
+
+  const modelId = S.currentModelId;
+  const modelSource = S.currentModelSource;
+  if (!modelId) {
+    showToast('Select an AI model first');
+    return;
+  }
+
+  // Clear input
+  if (input) { input.value = ''; discoverAutoResize(input); }
+
+  // Add user message
+  S.discoverMessages.push({role: 'user', content: text});
+  appendChatMessage('user', text);
+  scrollChat();
+
+  // Start AI message (typing indicator)
+  const {bubble, msgDiv} = startAIMessage(modelSource);
+  S.discoverStreaming = true;
+  const sendBtn = document.getElementById('discover-send');
+  if (sendBtn) sendBtn.disabled = true;
+
+  const includeProfile = document.getElementById('discover-include-profile')?.checked !== false;
+  let fullContent = '';
+
+  try {
+    const resp = await fetch('/api/discover/chat', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        model: modelId,
+        source: modelSource,
+        messages: S.discoverMessages.slice(0, -0), // all messages incl. new user msg
+        includeProfile,
+        includeJobs: true,
+      }),
+    });
+
+    // FIX: check HTTP status before attempting to stream body.
+    if (!resp.ok) {
+      const errText = await resp.text().catch(() => resp.statusText);
+      throw new Error('Server error ' + resp.status + ': ' + errText);
+    }
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, {stream: true});
+      const lines = buf.split('\n');
+      buf = lines.pop();
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6).trim();
+        if (data === '__AI_DONE__') break;
+        try {
+          const token = JSON.parse(data);
+          fullContent += token;
+          // Update bubble with live markdown (strip action tags for display)
+          bubble.innerHTML = parseMarkdown(stripActionTags(fullContent)) +
+            '<span class="chat-cursor"></span>';
+          scrollChat();
+        } catch {}
+      }
+    }
+  } catch(e) {
+    fullContent = 'Error: ' + e.message;
+  }
+
+  // Finalize
+  bubble.innerHTML = parseMarkdown(stripActionTags(fullContent));
+  S.discoverMessages.push({role: 'assistant', content: fullContent});
+
+  // Extract and render action items
+  const actions = extractActions(fullContent);
+  if (actions.length) {
+    S.discoverActions = [...new Set([...S.discoverActions, ...actions])];
+    renderDiscoverActions();
+  }
+
+  S.discoverStreaming = false;
+  if (sendBtn) sendBtn.disabled = false;
+  scrollChat();
+}
+
+function appendChatMessage(role, content) {
+  const container = document.getElementById('discover-messages');
+  if (!container) return;
+
+  // Hide starters
+  const starters = document.getElementById('discover-starters');
+  if (starters) starters.style.display = 'none';
+
+  const div = document.createElement('div');
+  div.className = 'chat-msg ' + role;
+
+  if (role === 'user') {
+    div.innerHTML = `
+      <div class="chat-bubble">${esc(content)}</div>
+      <div class="chat-avatar">👤</div>`;
+  }
+
+  container.appendChild(div);
+  return div;
+}
+
+function startAIMessage(source) {
+  const container = document.getElementById('discover-messages');
+  if (!container) return {bubble: null, msgDiv: null};
+
+  const starters = document.getElementById('discover-starters');
+  if (starters) starters.style.display = 'none';
+
+  const avatar = source === 'claude' ? '☁️' : '🦙';
+
+  const div = document.createElement('div');
+  div.className = 'chat-msg ai';
+  div.innerHTML = `
+    <div class="chat-avatar">${avatar}</div>
+    <div class="chat-bubble"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>`;
+  container.appendChild(div);
+
+  return {bubble: div.querySelector('.chat-bubble'), msgDiv: div};
+}
+
+function scrollChat() {
+  const c = document.getElementById('discover-messages');
+  if (c) c.scrollTop = c.scrollHeight;
+}
+
+function clearDiscoverChat() {
+  S.discoverMessages = [];
+  S.discoverStreaming = false;
+  const container = document.getElementById('discover-messages');
+  if (!container) return;
+  // Remove all chat-msg elements
+  container.querySelectorAll('.chat-msg').forEach(el => el.remove());
+  // Show starters
+  const starters = document.getElementById('discover-starters');
+  if (starters) starters.style.display = 'flex';
+  const sendBtn = document.getElementById('discover-send');
+  if (sendBtn) sendBtn.disabled = false;
+}
+
+// ── Markdown renderer (inline, no external deps) ──────────────────────────────
+
+function stripActionTags(text) {
+  return text.replace(/\[ACTION:search:"[^"]*"\]/g, '');
+}
+
+function parseMarkdown(raw) {
+  if (!raw) return '';
+
+  // Escape HTML
+  let t = raw
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  // Bold / italic / code (inline)
+  t = t.replace(/\*\*\*([^*]+)\*\*\*/g, '<strong><em>$1</em></strong>');
+  t = t.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+  t = t.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+  t = t.replace(/_([^_\n]+)_/g, '<em>$1</em>');
+  t = t.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+  // Process line by line for block elements
+  const lines = t.split('\n');
+  let result = [];
+  let inUl = false, inOl = false;
+
+  const closeList = () => {
+    if (inUl) { result.push('</ul>'); inUl = false; }
+    if (inOl) { result.push('</ol>'); inOl = false; }
+  };
+
+  for (const line of lines) {
+    const trim = line.trim();
+
+    // Headers
+    if (/^###\s/.test(trim)) {
+      closeList();
+      result.push(`<h3>${trim.slice(4)}</h3>`);
+      continue;
+    }
+    if (/^##\s/.test(trim)) {
+      closeList();
+      result.push(`<h2>${trim.slice(3)}</h2>`);
+      continue;
+    }
+    if (/^#\s/.test(trim)) {
+      closeList();
+      result.push(`<h1>${trim.slice(2)}</h1>`);
+      continue;
+    }
+
+    // Unordered list
+    const ulMatch = trim.match(/^[-*•]\s+(.+)/);
+    if (ulMatch) {
+      if (inOl) { result.push('</ol>'); inOl = false; }
+      if (!inUl) { result.push('<ul>'); inUl = true; }
+      result.push(`<li>${ulMatch[1]}</li>`);
+      continue;
+    }
+
+    // Ordered list
+    const olMatch = trim.match(/^(\d+)\.\s+(.+)/);
+    if (olMatch) {
+      if (inUl) { result.push('</ul>'); inUl = false; }
+      if (!inOl) { result.push('<ol>'); inOl = true; }
+      result.push(`<li>${olMatch[2]}</li>`);
+      continue;
+    }
+
+    closeList();
+
+    if (trim === '') {
+      // paragraph break — only add if prev wasn't already a block end
+      if (result.length && !result[result.length-1].endsWith('>')) {
+        result.push('</p><p>');
+      }
+    } else if (trim.startsWith('<h') || trim.startsWith('<ul') || trim.startsWith('<ol') || trim.startsWith('<li')) {
+      result.push(trim);
+    } else {
+      if (result.length === 0 || result[result.length-1] === '</p><p>') {
+        result.push(trim);
+      } else {
+        result.push('\n' + trim);
+      }
+    }
+  }
+  closeList();
+
+  let html = '<p>' + result.join('') + '</p>';
+  // Clean up empty paragraphs
+  html = html.replace(/<p><\/p>/g, '').replace(/<p>\s*<\/p>/g, '');
+  html = html.replace(/<p><h/g, '<h').replace(/<\/h([123])><\/p>/g, '</h$1>');
+  html = html.replace(/<p><ul>/g, '<ul>').replace(/<\/ul><\/p>/g, '</ul>');
+  html = html.replace(/<p><ol>/g, '<ol>').replace(/<\/ol><\/p>/g, '</ol>');
+  return html;
+}
+
+// ── Action item extraction ────────────────────────────────────────────────────
+
+function extractActions(text) {
+  const re = /\[ACTION:search:"([^"]+)"\]/g;
+  const actions = [];
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    if (m[1]) actions.push(m[1]);
+  }
+  return [...new Set(actions)];
+}
+
+function renderDiscoverActions() {
+  const panel = document.getElementById('discover-actions-panel');
+  const pills = document.getElementById('discover-action-pills');
+  if (!panel || !pills) return;
+
+  if (!S.discoverActions.length) {
+    panel.style.display = 'none';
+    return;
+  }
+
+  panel.style.display = '';
+  // FIX: use raw q in JSON.stringify (not esc(q)) to avoid double-escaping HTML.
+  pills.innerHTML = S.discoverActions.map(q =>
+    `<span class="action-pill" onclick="addDiscoverAction(${JSON.stringify(q)})" title="Add to search queries">
+      + ${esc(q.length > 40 ? q.slice(0, 40) + '…' : q)}
+    </span>`
+  ).join('');
+}
+
+function addDiscoverAction(query) {
+  // Add to the search tab's search-queries textarea
+  const ta = document.getElementById('search-queries');
+  if (ta) {
+    const existing = ta.value.trim();
+    ta.value = existing ? existing + '\n' + query : query;
+  }
+  // Also add to the portals query editor (general board)
+  const gen = document.getElementById('edit-queries-general');
+  if (gen) {
+    const existing = gen.value.trim();
+    gen.value = existing ? existing + '\n' + query : query;
+  }
+  showToast(`Added "${query.slice(0, 30)}…" to searches`);
+}
+
+function addAllDiscoverActions() {
+  S.discoverActions.forEach(q => addDiscoverAction(q));
+  showToast(`Added ${S.discoverActions.length} searches`);
+}
+
+function clearDiscoverActions() {
+  S.discoverActions = [];
+  renderDiscoverActions();
+}
+
+// ─── SETTINGS: AI CONFIG ──────────────────────────────────────────────────────
+
+async function checkOllamaStatus() {
+  const el = document.getElementById('ollama-status');
+  if (!el) return;
+  el.innerHTML = '<span class="spinner" style="vertical-align:middle;margin-right:6px"></span>Checking…';
+  try {
+    const data = await api('/api/discover/models');
+    if (data.ollamaRunning) {
+      const n = data.models.filter(m => m.source === 'ollama').length;
+      el.innerHTML = `<span style="color:var(--green)">🟢 Connected — ${n} model${n !== 1 ? 's' : ''} available</span>`;
+    } else {
+      el.innerHTML = '<span style="color:var(--red)">🔴 Not detected — run <code>ollama serve</code> in a terminal</span>';
+    }
+  } catch(e) {
+    el.innerHTML = `<span style="color:var(--red)">Error: ${esc(e.message)}</span>`;
+  }
+}
+
+async function saveClaudeApiKey() {
+  const key = document.getElementById('claude-api-key')?.value || '';
+  const statusEl = document.getElementById('claude-key-status');
+  try {
+    await api('/api/settings', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({claudeApiKey: key}),
+    });
+    if (statusEl) {
+      statusEl.textContent = key ? '✓ API key saved' : '✓ API key cleared';
+      statusEl.style.color = 'var(--green)';
+      setTimeout(() => {
+        if (statusEl) {
+          statusEl.style.color = '';
+          statusEl.textContent = 'Your API key is stored locally in data/settings.json and never leaves your machine.';
+        }
+      }, 3000);
+    }
+    showToast(key ? 'Claude API key saved' : 'Claude API key cleared');
+    // Refresh models if on discover tab
+    if (S.tab === 'discover') loadDiscoverModels();
+  } catch(e) {
+    if (statusEl) { statusEl.textContent = 'Error: ' + e.message; statusEl.style.color = 'var(--red)'; }
+  }
+}
+
+async function clearClaudeApiKey() {
+  document.getElementById('claude-api-key').value = '';
+  await saveClaudeApiKey();
+}
+
+async function loadSettingsAI() {
+  try {
+    const settings = await api('/api/settings');
+    const keyEl = document.getElementById('claude-api-key');
+    if (keyEl && settings.claudeApiKeySet) {
+      keyEl.placeholder = '••• API key is set (enter new value to replace) •••';
+    }
+    checkOllamaStatus();
+  } catch(e) { console.error(e); }
+}
+
+// ─── SEARCH TAB: portals.yml query editor ────────────────────────────────────
+
+async function loadPortalQueries() {
+  try {
+    // Re-fetch portals fresh (bypasses S.portals cache if stale).
+    // FIX: check response status before parsing.
+    const raw = await fetch('/api/portals');
+    if (!raw.ok) throw new Error('HTTP ' + raw.status);
+    const portals = await raw.json();
+    const tf = portals?.title_filter || {};
+    const sq = portals?.search_queries || {};
+
+    const pos = document.getElementById('edit-title-positive');
+    const neg = document.getElementById('edit-title-negative');
+    if (pos) pos.value = (tf.positive || []).join('\n');
+    if (neg) neg.value = (tf.negative || []).join('\n');
+
+    ['ashby', 'greenhouse', 'lever', 'wellfound', 'general'].forEach(board => {
+      const el = document.getElementById('edit-queries-' + board);
+      if (el) el.value = (sq[board] || []).join('\n');
+    });
+  } catch(e) {
+    console.error('loadPortalQueries:', e);
+    // FIX: surface error in the status element so user knows the load failed.
+    const statusEl = document.getElementById('portal-save-status');
+    if (statusEl) { statusEl.textContent = 'Failed to load portals.yml: ' + e.message; statusEl.style.color = 'var(--red)'; }
+  }
+}
+
+async function savePortalQueries() {
+  const titlePos = (document.getElementById('edit-title-positive')?.value || '')
+    .split('\n').map(l => l.trim()).filter(Boolean);
+  const titleNeg = (document.getElementById('edit-title-negative')?.value || '')
+    .split('\n').map(l => l.trim()).filter(Boolean);
+
+  const searchQueries = {};
+  ['ashby', 'greenhouse', 'lever', 'wellfound', 'general'].forEach(board => {
+    const val = document.getElementById('edit-queries-' + board)?.value || '';
+    searchQueries[board] = val.split('\n').map(l => l.trim()).filter(Boolean);
+  });
+
+  const statusEl = document.getElementById('portal-save-status');
+  try {
+    await api('/api/portals/update-queries', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({title_positive: titlePos, title_negative: titleNeg, search_queries: searchQueries}),
+    });
+    if (statusEl) { statusEl.textContent = '✓ Saved to portals.yml'; statusEl.style.color = 'var(--green)'; }
+    setTimeout(() => { if (statusEl) { statusEl.textContent = ''; statusEl.style.color = ''; } }, 3000);
+    showToast('portals.yml saved');
+    // Invalidate cached portals so next fetch returns fresh data
+    S.portals = null;
+  } catch(e) {
+    if (statusEl) { statusEl.textContent = 'Error: ' + e.message; statusEl.style.color = 'var(--red)'; }
+  }
+}
+
+// ─── WORK PREFERENCES ─────────────────────────────────────────────────────────
+
+let prefSaveTimer = null;
+
+function savePrefDebounced() {
+  clearTimeout(prefSaveTimer);
+  prefSaveTimer = setTimeout(() => savePreferences(), 1200);
+}
+
+function triToggleClick(btn, prefKey, val) {
+  // Deselect siblings inside same tri-toggle
+  const parent = btn.parentElement;
+  parent.querySelectorAll('.tri-opt,.four-opt').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+  S.workPrefs = S.workPrefs || {};
+  S.workPrefs[prefKey] = val;
+  savePrefDebounced();
+}
+
+function mpillClick(btn, prefKey, val) {
+  btn.classList.toggle('sel');
+  S.workPrefs = S.workPrefs || {};
+  if (!Array.isArray(S.workPrefs[prefKey])) S.workPrefs[prefKey] = [];
+  if (btn.classList.contains('sel')) {
+    if (!S.workPrefs[prefKey].includes(val)) S.workPrefs[prefKey].push(val);
+  } else {
+    S.workPrefs[prefKey] = S.workPrefs[prefKey].filter(v => v !== val);
+  }
+  savePrefDebounced();
+}
+
+function togglePrefPanel() {
+  const panel = document.getElementById('pref-panel');
+  const btn = document.getElementById('pref-toggle-btn');
+  if (!panel) return;
+  const hidden = panel.style.display === 'none';
+  panel.style.display = hidden ? '' : 'none';
+  if (btn) btn.textContent = hidden ? '▾' : '▸';
+}
+
+// Read current tri-toggle value for a given prefKey from the DOM
+function getTriVal(prefKey) {
+  const all = document.querySelectorAll('#pref-panel .tri-opt.sel');
+  for (const btn of all) {
+    const m = btn.getAttribute('onclick')?.match(/triToggleClick\(this,'([^']+)','([^']+)'\)/);
+    if (m && m[1] === prefKey) return m[2];
+  }
+  return null;
+}
+
+// Read selected mpill values for a given prefKey from the DOM
+function getMPillVals(prefKey) {
+  const container = document.getElementById('pref-pills-' + prefKey);
+  if (!container) return [];
+  const vals = [];
+  container.querySelectorAll('.mpill.sel').forEach(btn => {
+    const m = btn.getAttribute('onclick')?.match(/mpillClick\(this,'[^']+','([^']+)'\)/);
+    if (m) vals.push(m[1]);
+  });
+  return vals;
+}
+
+function getPrefState() {
+  const prefs = {
+    weekFormat:          getTriVal('weekFormat')          || 'standard',
+    hoursFlexibility:    getTriVal('hoursFlexibility')    || 'moderate',
+    overtime:            getTriVal('overtime')            || 'none',
+    locationPref:        getTriVal('locationPref')        || 'remote',
+    officeVibe:          getMPillVals('officeVibe'),
+    teamSize:            getTriVal('teamSize')            || 'small',
+    customerFacing:      getTriVal('customerFacing')      || 'some',
+    managementInterest:  getTriVal('managementInterest')  || 'ic',
+    pace:                getTriVal('pace')                || 'balanced',
+    taskTypes:           getMPillVals('taskTypes'),
+    travelPct:           parseInt(document.getElementById('pref-travel')?.value || '30'),
+    avoidIndustries:     getMPillVals('avoidIndustries'),
+  };
+  prefs.ai_summary = getWorkPrefSummary(prefs);
+  return prefs;
+}
+
+function getWorkPrefSummary(p) {
+  p = p || getPrefState();
+  const parts = [];
+  const wfMap = {standard:'5-day work week', '4day':'4-day work week', flex:'flexible schedule'};
+  if (wfMap[p.weekFormat]) parts.push('Prefers ' + wfMap[p.weekFormat]);
+  const hfMap = {strict:'strict 9-5 hours preferred', moderate:'moderate schedule flexibility', async:'async/flexible hours preferred'};
+  if (hfMap[p.hoursFlexibility]) parts.push(hfMap[p.hoursFlexibility]);
+  const otMap = {none:'no overtime preferred', occasional:'occasional overtime acceptable', willing:'willing to work overtime when needed'};
+  if (otMap[p.overtime]) parts.push(otMap[p.overtime]);
+  const locMap = {remote:'strongly prefers fully remote work', hybrid:'open to hybrid work arrangement', onsite:'open to on-site work'};
+  if (locMap[p.locationPref]) parts.push(locMap[p.locationPref]);
+  const tsMap = {solo:'prefers working solo or with tiny team', small:'prefers small teams (5–20 people)', large:'comfortable in large organizations'};
+  if (tsMap[p.teamSize]) parts.push(tsMap[p.teamSize]);
+  const cfMap = {none:'minimal client-facing interaction preferred', some:'comfortable with some client interaction', lots:'enjoys substantial customer-facing work'};
+  if (cfMap[p.customerFacing]) parts.push(cfMap[p.customerFacing]);
+  const miMap = {ic:'wants to stay individual contributor', open:'open to management eventually', yes:'actively seeking leadership/management role'};
+  if (miMap[p.managementInterest]) parts.push(miMap[p.managementInterest]);
+  const paceMap = {methodical:'prefers methodical deliberate pace', balanced:'prefers balanced pace', fast:'thrives in fast-paced scrappy environment'};
+  if (paceMap[p.pace]) parts.push(paceMap[p.pace]);
+  if (p.travelPct !== undefined) parts.push('comfortable with up to ' + p.travelPct + '% travel');
+  if (p.taskTypes?.length) parts.push('enjoys: ' + p.taskTypes.join(', '));
+  if (p.avoidIndustries?.length) parts.push('industries to avoid: ' + p.avoidIndustries.join(', '));
+  return parts.join('. ') + '.';
+}
+
+function setPrefState(prefs) {
+  if (!prefs) return;
+  S.workPrefs = prefs;
+
+  // Tri-toggles
+  const triKeys = ['weekFormat','hoursFlexibility','overtime','locationPref','teamSize','customerFacing','managementInterest','pace'];
+  triKeys.forEach(key => {
+    const val = prefs[key];
+    if (!val) return;
+    document.querySelectorAll('#pref-panel .tri-opt').forEach(btn => {
+      const m = btn.getAttribute('onclick')?.match(/triToggleClick\(this,'([^']+)','([^']+)'\)/);
+      if (m && m[1] === key) btn.classList.toggle('sel', m[2] === val);
+    });
+  });
+
+  // MPill groups
+  ['officeVibe','taskTypes','avoidIndustries'].forEach(key => {
+    const vals = prefs[key] || [];
+    const container = document.getElementById('pref-pills-' + key);
+    if (!container) return;
+    container.querySelectorAll('.mpill').forEach(btn => {
+      const m = btn.getAttribute('onclick')?.match(/mpillClick\(this,'[^']+','([^']+)'\)/);
+      if (m) btn.classList.toggle('sel', vals.includes(m[1]));
+    });
+  });
+
+  // Travel slider
+  const travel = document.getElementById('pref-travel');
+  const travelVal = document.getElementById('pref-travel-val');
+  if (travel && prefs.travelPct !== undefined) {
+    travel.value = prefs.travelPct;
+    if (travelVal) travelVal.textContent = prefs.travelPct + '%';
+  }
+}
+
+async function loadPreferences() {
+  try {
+    const prefs = await api('/api/preferences');
+    if (prefs && Object.keys(prefs).length) setPrefState(prefs);
+  } catch(e) { console.error('loadPreferences:', e); }
+}
+
+async function savePreferences() {
+  const prefs = getPrefState();
+  S.workPrefs = prefs;
+  const statusEl = document.getElementById('pref-save-status');
+  try {
+    await api('/api/preferences', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(prefs),
+    });
+    if (statusEl) {
+      statusEl.textContent = '✓ Saved';
+      statusEl.style.color = 'var(--green)';
+      setTimeout(() => { if (statusEl) { statusEl.textContent = ''; statusEl.style.color = ''; } }, 2000);
+    }
+  } catch(e) {
+    if (statusEl) { statusEl.textContent = 'Error saving'; statusEl.style.color = 'var(--red)'; }
+  }
+}
+
+// ─── CAREER PERSONALITY ASSESSMENT ───────────────────────────────────────────
+
+const ASSESSMENT_QUESTIONS = [
+  {
+    q: "When starting a new project, your first instinct is to…",
+    opts: [
+      "Map out the full architecture before writing a single line",
+      "Identify the key stakeholders and understand their goals first",
+      "Brainstorm the boldest, most ambitious version of what this could be",
+      "Break the problem into its smallest measurable components"
+    ]
+  },
+  {
+    q: "A colleague presents a solution you think is flawed. You…",
+    opts: [
+      "Build a small prototype demonstrating why your approach works better",
+      "Have a private conversation to understand their thinking first",
+      "Challenge it directly — that's how good ideas win",
+      "Document your concerns with evidence and propose clear alternatives"
+    ]
+  },
+  {
+    q: "Your ideal weekly rhythm looks like…",
+    opts: [
+      "Systematic progress: tickets, milestones, code reviews",
+      "A mix of 1:1s, cross-team syncs, and focused build time",
+      "Whiteboard sessions, ideation sprints, live demos",
+      "Deep focus blocks with zero interruptions"
+    ]
+  },
+  {
+    q: "You're most energized by…",
+    opts: [
+      "Shipping something that works exactly as designed",
+      "Getting a diverse team aligned on a shared vision",
+      "Discovering an insight nobody else had seen",
+      "Watching someone you mentored level up dramatically"
+    ]
+  },
+  {
+    q: "Someone says 'we need this fast, quality can be rough.' You…",
+    opts: [
+      "Push back — shipping broken work creates more debt than it saves",
+      "Understand the business pressure and find a real compromise",
+      "Love it — constraints breed creativity",
+      "Agree, then immediately document every corner that was cut"
+    ]
+  },
+  {
+    q: "Your ideal team structure is…",
+    opts: [
+      "Small team with clear roles and tight collaboration",
+      "Cross-functional squad with diverse, complementary backgrounds",
+      "Flat, autonomous crew where anyone can own anything",
+      "Solo or paired with one other very senior specialist"
+    ]
+  },
+  {
+    q: "When entering a completely new domain, you…",
+    opts: [
+      "Read everything authoritative before touching anything",
+      "Jump in, make mistakes, and learn entirely by doing",
+      "Find the best expert and learn directly from them",
+      "Build a tiny project that forces you to touch all the pieces"
+    ]
+  },
+  {
+    q: "Your project is going to miss its deadline. You…",
+    opts: [
+      "Surface it immediately with a revised plan and clear mitigation steps",
+      "Recalibrate the team, surface blockers, and rally everyone forward",
+      "Escalate to stakeholders with full context and trade-off options",
+      "Go heads-down and try to close the gap yourself first"
+    ]
+  },
+  {
+    q: "The impact you most want from your work is…",
+    opts: [
+      "Products that are elegant, correct, and built to last",
+      "Connections and relationships that outlast the role itself",
+      "Ideas that change how people think about a problem",
+      "Deep expertise that makes you genuinely irreplaceable"
+    ]
+  },
+  {
+    q: "People who've worked with you would most likely say…",
+    opts: [
+      "'Most thorough, systematic person I've ever worked with'",
+      "'Gets everyone rowing in exactly the same direction'",
+      "'Full of ideas — half insane, a quarter brilliant'",
+      "'Digs deeper into data and logic than anyone I know'"
+    ]
+  }
+];
+
+// Scoring matrix: ASSESS_MATRIX[questionIdx][optionIdx] → persona index
+// 0=Methodical Builder, 1=Strategic Connector, 2=Creative Catalyst,
+// 3=Analytical Solver,  4=Empathetic Leader,   5=Autonomous Expert
+const ASSESS_MATRIX = [
+  [0, 1, 2, 3], // Q1
+  [0, 4, 2, 3], // Q2
+  [0, 1, 2, 5], // Q3
+  [0, 1, 3, 4], // Q4
+  [0, 1, 2, 3], // Q5
+  [0, 1, 2, 5], // Q6
+  [3, 2, 4, 5], // Q7
+  [0, 4, 1, 5], // Q8
+  [0, 1, 2, 5], // Q9
+  [0, 1, 2, 3], // Q10
+];
+
+const PERSONAS = [
+  {
+    name: "Methodical Builder",
+    tagline: "You build things that are right the first time — and the last time.",
+    traits: ["Systematic", "Quality-driven", "Architecture-first", "Detail-oriented"],
+    roles: ["Staff Engineer", "Platform Engineer", "Technical Lead", "Senior SWE"],
+    summary: "You are a Methodical Builder — systematic, quality-driven, and architecture-first. You take deep pride in building things correctly rather than quickly, and your work holds up under scrutiny."
+  },
+  {
+    name: "Strategic Connector",
+    tagline: "You see the people behind the problem — and align them toward the same goal.",
+    traits: ["Big-picture", "Relationship-driven", "Cross-functional", "Stakeholder-aware"],
+    roles: ["Technical Account Manager", "Solutions Engineer", "Product Manager", "Engineering Manager"],
+    summary: "You are a Strategic Connector — relationship-driven and big-picture. You align people and teams toward shared goals, and your greatest impact comes through orchestrating others."
+  },
+  {
+    name: "Creative Catalyst",
+    tagline: "You inject energy, ideas, and a little chaos into everything you touch.",
+    traits: ["Experimental", "Bold", "Ideation-driven", "Constraint-loving"],
+    roles: ["Developer Relations", "Product Designer", "Startup Engineer", "R&D Engineer"],
+    summary: "You are a Creative Catalyst — experimental, bold, and energized by constraints and novel ideas. You thrive in ambiguous spaces where rules haven't been written yet."
+  },
+  {
+    name: "Analytical Solver",
+    tagline: "You trust data over intuition — and your intuition is data-driven anyway.",
+    traits: ["Data-driven", "Logic-first", "Evidence-based", "Rigorous"],
+    roles: ["Data Scientist", "ML Engineer", "Research Scientist", "Analytical Chemist"],
+    summary: "You are an Analytical Solver — data-driven, rigorous, and logic-first. You decompose complex problems and validate every decision with evidence before committing."
+  },
+  {
+    name: "Empathetic Leader",
+    tagline: "You make people better at what they do — just by being in the room.",
+    traits: ["People-first", "Mentoring", "Team-dynamics", "Emotionally-aware"],
+    roles: ["Engineering Manager", "Customer Success", "Field Applications Scientist", "Technical Trainer"],
+    summary: "You are an Empathetic Leader — people-first and mentoring-focused. Your highest leverage comes from making the people around you measurably better at their craft."
+  },
+  {
+    name: "Autonomous Expert",
+    tagline: "You own your domain completely — and you do your best work with full autonomy.",
+    traits: ["Deep-expertise", "Self-directed", "Ownership-driven", "Independent"],
+    roles: ["Principal Engineer", "Research Scientist", "Staff AI Engineer", "Independent Contributor"],
+    summary: "You are an Autonomous Expert — deeply knowledgeable, self-directed, and most effective when given full ownership of your domain. You need minimal oversight to produce exceptional work."
+  }
+];
+
+let assessAnswers = [];
+let assessCurrentQ = 0;
+
+function openAssessment() {
+  assessAnswers = new Array(ASSESSMENT_QUESTIONS.length).fill(-1);
+  assessCurrentQ = 0;
+  const modal = document.getElementById('assessment-modal');
+  if (modal) modal.style.display = 'flex';
+  assessRenderQuestion(0);
+}
+
+function closeAssessment() {
+  const modal = document.getElementById('assessment-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function assessRenderQuestion(idx) {
+  const q = ASSESSMENT_QUESTIONS[idx];
+  const total = ASSESSMENT_QUESTIONS.length;
+  document.getElementById('assess-counter').textContent = 'Question ' + (idx + 1) + ' of ' + total;
+  document.getElementById('assess-bar').style.width = ((idx / total) * 100) + '%';
+  document.getElementById('assess-question').textContent = q.q;
+
+  const letters = ['A','B','C','D'];
+  document.getElementById('assess-options').innerHTML = q.opts.map((opt, i) =>
+    `<button class="assess-opt${assessAnswers[idx] === i ? ' sel' : ''}" onclick="assessSelectOption(${i})">
+      <span class="assess-letter">${letters[i]}</span><span>${esc(opt)}</span>
+    </button>`
+  ).join('');
+
+  const backBtn = document.getElementById('assess-back');
+  if (backBtn) backBtn.style.display = idx > 0 ? '' : 'none';
+
+  const nextBtn = document.getElementById('assess-next');
+  if (nextBtn) {
+    nextBtn.textContent = idx === total - 1 ? 'Submit ✓' : 'Next →';
+    nextBtn.disabled = assessAnswers[idx] === -1;
+  }
+}
+
+function assessSelectOption(optIdx) {
+  assessAnswers[assessCurrentQ] = optIdx;
+  document.querySelectorAll('#assess-options .assess-opt').forEach((btn, i) => {
+    btn.classList.toggle('sel', i === optIdx);
+  });
+  const nextBtn = document.getElementById('assess-next');
+  if (nextBtn) nextBtn.disabled = false;
+}
+
+function assessNext() {
+  if (assessAnswers[assessCurrentQ] === -1) return;
+  if (assessCurrentQ < ASSESSMENT_QUESTIONS.length - 1) {
+    assessCurrentQ++;
+    assessRenderQuestion(assessCurrentQ);
+  } else {
+    closeAssessment();
+    const persona = scorePersona(assessAnswers);
+    renderPersonaCard(persona);
+    savePersona(persona);
+  }
+}
+
+function assessBack() {
+  if (assessCurrentQ > 0) {
+    assessCurrentQ--;
+    assessRenderQuestion(assessCurrentQ);
+  }
+}
+
+function scorePersona(answers) {
+  const scores = new Array(PERSONAS.length).fill(0);
+  answers.forEach((optIdx, qIdx) => {
+    if (optIdx >= 0 && ASSESS_MATRIX[qIdx] !== undefined) {
+      const personaIdx = ASSESS_MATRIX[qIdx][optIdx];
+      if (personaIdx !== undefined) scores[personaIdx]++;
+    }
+  });
+  const maxScore = Math.max(...scores);
+  const topIdx = scores.indexOf(maxScore);
+  return {...PERSONAS[topIdx], scores};
+}
+
+function renderPersonaCard(persona) {
+  const display = document.getElementById('persona-display');
+  if (!display) return;
+  display.innerHTML = `
+    <div class="persona-card">
+      <div class="persona-name">${esc(persona.name)}</div>
+      <div class="persona-tagline">${esc(persona.tagline)}</div>
+      <div class="persona-trait-pills">
+        ${(persona.traits || []).map(t => `<span class="mpill sel">${esc(t)}</span>`).join('')}
+      </div>
+      <div class="persona-roles">
+        <strong>Strong fit:</strong> ${(persona.roles || []).map(r => esc(r)).join(' · ')}
+      </div>
+    </div>
+    <div style="margin-top:10px">
+      <button class="btn sm" onclick="openAssessment()">↺ Retake</button>
+    </div>
+  `;
+}
+
+async function loadPersona() {
+  try {
+    const endpoint = S.guestMode ? '/api/guest/work-persona' : '/api/work-persona';
+    const persona = await api(endpoint);
+    if (persona && persona.name) renderPersonaCard(persona);
+  } catch(e) { console.error('loadPersona:', e); }
+}
+
+async function savePersona(persona) {
+  try {
+    const endpoint = S.guestMode ? '/api/guest/work-persona' : '/api/work-persona';
+    await api(endpoint, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(persona),
+    });
+    showToast('Work persona saved ✓');
+  } catch(e) { console.error('savePersona:', e); }
+}
+
+// ─── GUEST MODE ───────────────────────────────────────────────────────────────
+
+Object.assign(S, {
+  guestMode: false,
+});
+
+function openGuestModal() {
+  document.getElementById('guest-modal').style.display = 'flex';
+}
+
+function closeGuestModal() {
+  document.getElementById('guest-modal').style.display = 'none';
+}
+
+async function enterGuestMode() {
+  closeGuestModal();
+
+  // Reset guest data to a clean slate.
+  try { await api('/api/guest/reset'); } catch(e) { console.error('guest reset:', e); }
+
+  S.guestMode = true;
+
+  // Show guest mode indicators in the nav.
+  document.getElementById('guest-badge').style.display = '';
+  document.getElementById('guest-exit-btn').style.display = '';
+  // Hide the "Guest Mode" entry button during session.
+  document.querySelector('button[onclick="openGuestModal()"]').style.display = 'none';
+
+  // Load fresh empty state for guest session.
+  S.jobs = [];
+  S.stats = null;
+  S.pipeline = [];
+
+  // Navigate to Discover and trigger onboarding flow.
+  switchTab('discover');
+  // Small delay to let the tab render before showing the welcome banner.
+  setTimeout(() => triggerGuestOnboarding(), 200);
+}
+
+function exitGuestMode() {
+  S.guestMode = false;
+  document.getElementById('guest-badge').style.display = 'none';
+  document.getElementById('guest-exit-btn').style.display = 'none';
+  document.querySelector('button[onclick="openGuestModal()"]').style.display = '';
+  // Remove welcome banner if present.
+  const banner = document.getElementById('guest-welcome-banner');
+  if (banner) banner.remove();
+  // Reload real data.
+  S.jobs = [];
+  S.stats = null;
+  S.pipeline = [];
+  Promise.all([loadStats(), loadProfile()]).then(() => renderOverview());
+  showToast('Returned to your real data');
+  switchTab('overview');
+}
+
+function triggerGuestOnboarding() {
+  // Show welcome banner in the Discover tab.
+  const discoverTab = document.getElementById('tab-discover');
+  if (discoverTab && !document.getElementById('guest-welcome-banner')) {
+    const banner = document.createElement('div');
+    banner.id = 'guest-welcome-banner';
+    banner.className = 'guest-welcome-banner';
+    banner.innerHTML = `
+      <div class="gwb-icon">👋</div>
+      <div>
+        <h3>Welcome! Let's set up your career profile.</h3>
+        <p>This takes about 3 minutes. Start by setting your Work Preferences below, then we'll find your Work Persona.</p>
+      </div>`;
+    discoverTab.insertBefore(banner, discoverTab.firstChild);
+  }
+
+  // Auto-open Work Preferences panel if it's collapsed.
+  const prefPanel = document.getElementById('pref-panel');
+  const prefToggle = document.getElementById('pref-toggle-btn');
+  if (prefPanel && prefPanel.style.display === 'none') {
+    prefPanel.style.display = '';
+    if (prefToggle) prefToggle.textContent = '▾';
+  }
+
+  // Load guest preferences (empty) and guest persona status.
+  loadGuestPreferences();
+}
+
+async function loadGuestPreferences() {
+  try {
+    const prefs = await api('/api/guest/preferences');
+    if (prefs && Object.keys(prefs).length) {
+      setPrefState(prefs);
+    }
+    // Check if persona is already saved from a previous guest session.
+    const { has_persona } = await api('/api/guest/has-persona');
+    if (has_persona) {
+      const persona = await api('/api/guest/work-persona');
+      if (persona && persona.name) renderPersonaCard(persona);
+    }
+  } catch(e) { console.error('loadGuestPreferences:', e); }
+}
+
+// Override savePreferences to route to guest endpoint when in guest mode.
+const _origSavePrefs = savePreferences;
+async function savePreferences() {
+  if (!S.guestMode) return _origSavePrefs();
+
+  const prefs = getPrefState();
+  S.workPrefs = prefs;
+  const statusEl = document.getElementById('pref-save-status');
+  try {
+    await api('/api/guest/preferences', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(prefs),
+    });
+    if (statusEl) {
+      statusEl.textContent = '✓ Saved (Guest)';
+      statusEl.style.color = 'var(--yellow)';
+      setTimeout(() => { if (statusEl) { statusEl.textContent = ''; statusEl.style.color = ''; } }, 2000);
+    }
+    // After saving prefs in guest mode, nudge toward the assessment.
+    const banner = document.getElementById('guest-welcome-banner');
+    if (banner && !document.getElementById('guest-persona-nudge')) {
+      const nudge = document.createElement('div');
+      nudge.id = 'guest-persona-nudge';
+      nudge.style.cssText = 'margin-top:10px;padding:10px 14px;background:#1a2f4a;border:1px solid rgba(79,142,247,.3);border-radius:6px;font-size:12px;display:flex;align-items:center;gap:10px';
+      nudge.innerHTML = `<span style="font-size:18px">🎯</span>
+        <span>Great! Now let's find your <strong>Work Persona</strong> →
+          <button class="btn sm primary" style="margin-left:8px" onclick="openAssessment()">Start Assessment</button>
+        </span>`;
+      banner.after(nudge);
+    }
+  } catch(e) {
+    if (statusEl) { statusEl.textContent = 'Error saving'; statusEl.style.color = 'var(--red)'; }
+  }
+}
+
+// ===== GUEST MODE =====
+let guestMode = false;
+
+function toggleGuestMode() {
+  if (guestMode) return exitGuestMode();
+  if (!confirm('Guest Mode lets you try the full onboarding flow without touching your real data.\nYour jobs, applications, and preferences are safe.\n\nEnter Guest Mode?')) return;
+  enterGuestMode();
+}
+
+async function enterGuestMode() {
+  await fetch('/api/guest/reset');
+  guestMode = true;
+  localStorage.setItem('career-ops-guest', 'true');
+  document.getElementById('guestStatusBar').style.display = 'flex';
+  document.getElementById('guestModeBtn').style.display = 'none';
+  switchTab('discover');
+  setTimeout(() => triggerGuestOnboarding(), 400);
+}
+
+function exitGuestMode() {
+  guestMode = false;
+  localStorage.removeItem('career-ops-guest');
+  location.reload();
+}
+
+function triggerGuestOnboarding() {
+  const existing = document.getElementById('guestWelcomeBanner');
+  if (existing) existing.remove();
+  const banner = document.createElement('div');
+  banner.id = 'guestWelcomeBanner';
+  banner.style.cssText = 'background:#f59e0b;color:#000;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-weight:600;';
+  banner.innerHTML = '👋 Welcome! Let\'s set up your career profile. Takes about 3 minutes. <button onclick="startGuestPreferences()" style="margin-left:12px;padding:4px 12px;background:#000;color:#f59e0b;border:none;border-radius:4px;cursor:pointer;font-weight:700;">Get Started →</button>';
+  const discoverLeft = document.querySelector('.discover-left');
+  if (discoverLeft) discoverLeft.prepend(banner);
+}
+
+function startGuestPreferences() {
+  document.getElementById('guestWelcomeBanner')?.remove();
+  const prefsPanel = document.getElementById('preferencesPanel');
+  if (prefsPanel) {
+    prefsPanel.style.display = 'block';
+    prefsPanel.scrollIntoView({ behavior: 'smooth' });
+  }
+}
+
+// Intercept all fetch calls in guest mode to append ?guest=true
+const _originalFetch = window.fetch.bind(window);
+window.fetch = function(url, opts) {
+  if (guestMode && typeof url === 'string' && url.startsWith('/api/')) {
+    const sep = url.includes('?') ? '&' : '?';
+    url = url + sep + 'guest=true';
+  }
+  return _originalFetch(url, opts);
+};
+
+// Restore guest mode on page load if previously active
+(function restoreGuestMode() {
+  if (localStorage.getItem('career-ops-guest') === 'true') {
+    guestMode = true;
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('guestStatusBar').style.display = 'flex';
+      document.getElementById('guestModeBtn').style.display = 'none';
+    });
+    // Also apply immediately if DOM is already ready
+    if (document.readyState !== 'loading') {
+      const bar = document.getElementById('guestStatusBar');
+      const btn = document.getElementById('guestModeBtn');
+      if (bar) bar.style.display = 'flex';
+      if (btn) btn.style.display = 'none';
+    }
+  }
+})();
+
 </script>
+
+<!-- ─── GUEST MODE MODAL ──────────────────────────────────────────────────── -->
+<div id="guest-modal">
+  <div class="guest-modal-wrap">
+    <h2>🎭 Guest Mode</h2>
+    <p>
+      Guest Mode lets you experience the full new-user onboarding flow — Work Preferences,
+      Career Persona Assessment, and the Discover AI — without touching your real data.
+      Your actual jobs, applications, and preferences are completely safe.
+    </p>
+    <p style="color:var(--text);font-size:12px">
+      All Guest Mode data is stored in <code>data/guest/</code> and can be wiped at any time.
+    </p>
+    <div class="btn-group">
+      <button class="btn primary" onclick="enterGuestMode()">🎭 Enter Guest Mode</button>
+      <button class="btn" onclick="closeGuestModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── CAREER ASSESSMENT MODAL ─────────────────────────────────────────────── -->
+<div id="assessment-modal" style="display:none">
+  <div class="assess-wrap">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-size:14px;font-weight:700;color:var(--text)">Career Persona Assessment</div>
+      <button class="btn sm" onclick="closeAssessment()">✕ Close</button>
+    </div>
+    <div class="assess-progress-bar"><div class="assess-bar-fill" id="assess-bar" style="width:0%"></div></div>
+    <div class="assess-counter" id="assess-counter">Question 1 of 10</div>
+    <div class="assess-q" id="assess-question"></div>
+    <div id="assess-options"></div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
+      <button class="btn sm" id="assess-back" onclick="assessBack()" style="display:none">← Back</button>
+      <button class="btn sm primary" id="assess-next" onclick="assessNext()" disabled>Next →</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

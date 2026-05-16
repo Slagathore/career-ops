@@ -55,4 +55,22 @@ dashboard/*.exe
 webui/webui.exe
 webui/webui.exe-go-tmp-umask
 webui/*.exe
+webui/*.exe~
+career-ops-webui.exe
 *.exe-go-tmp-umask
+
+# Apply-engine runtime state — regenerated automatically, never commit.
+# browser-profiles holds live login session cookies; the rest is PII / secrets.
+data/browser-profiles/
+data/screenshots/
+data/dry-runs/
+data/guest/
+data/intel/
+data/intel-index.json
+data/learned-fields.json
+data/learned-login-forms.json
+data/profile.json
+data/settings.json
+data/.gmail-token.json
+data/.credentials.enc
+webui/data/
