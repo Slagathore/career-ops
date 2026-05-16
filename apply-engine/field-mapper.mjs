@@ -273,9 +273,14 @@ export function findReport(company, role) {
         .map(f => ({ name: f, path: join(dir, f), mtime: statSync(join(dir, f)).mtimeMs }))
         .sort((a, b) => b.mtime - a.mtime);
 
+      // Match on company (or role) slug — but ONLY when the slug is non-empty.
+      // `"anything".includes("")` is always true, so without this guard an
+      // empty roleSlug matched every report and returned the newest one,
+      // loading the wrong company's data into the application form.
       const match = files.find(f => {
         const lower = f.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-        return lower.includes(companySlug) || lower.includes(roleSlug);
+        return (companySlug && lower.includes(companySlug)) ||
+               (roleSlug && lower.includes(roleSlug));
       });
       if (match) return match.path;
     } catch {

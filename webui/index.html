@@ -61,6 +61,9 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .table-wrap{overflow-x:auto}
 table{width:100%;border-collapse:collapse}
 thead th{padding:8px 10px;text-align:left;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:2;white-space:nowrap}
+thead th.sortable{cursor:pointer;user-select:none}
+thead th.sortable:hover{color:var(--text)}
+.sort-ind{color:var(--accent);font-size:10px}
 tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
 tbody tr:hover{background:var(--surface2)}
 tbody td{padding:8px 10px;font-size:13px;vertical-align:middle}
@@ -401,9 +404,16 @@ code{background:var(--surface2);padding:1px 5px;border-radius:3px;font-size:12px
         <div class="table-wrap">
           <table>
             <thead><tr>
-              <th>Age</th><th>Source</th><th>Company</th><th>Role</th>
-              <th>★ Rating</th><th>💰 Salary</th><th>Match</th><th onclick="sortJobsByDistance()" style="cursor:pointer" title="Sort by distance">📍 Dist</th>
-              <th>Status</th><th>Actions</th>
+              <th class="sortable" onclick="sortJobsBy('age')">Age<span class="sort-ind" data-col="age"></span></th>
+              <th class="sortable" onclick="sortJobsBy('source')">Source<span class="sort-ind" data-col="source"></span></th>
+              <th class="sortable" onclick="sortJobsBy('company')">Company<span class="sort-ind" data-col="company"></span></th>
+              <th class="sortable" onclick="sortJobsBy('role')">Role<span class="sort-ind" data-col="role"></span></th>
+              <th class="sortable" onclick="sortJobsBy('rating')">★ Rating<span class="sort-ind" data-col="rating"></span></th>
+              <th class="sortable" onclick="sortJobsBy('salary')">💰 Salary<span class="sort-ind" data-col="salary"></span></th>
+              <th class="sortable" onclick="sortJobsBy('match')">Match<span class="sort-ind" data-col="match"></span></th>
+              <th onclick="sortJobsByDistance()" style="cursor:pointer" title="Sort by distance">📍 Dist</th>
+              <th class="sortable" onclick="sortJobsBy('status')">Status<span class="sort-ind" data-col="status"></span></th>
+              <th>Actions</th>
             </tr></thead>
             <tbody id="jobs-tbody"></tbody>
           </table>
@@ -418,23 +428,33 @@ code{background:var(--surface2);padding:1px 5px;border-radius:3px;font-size:12px
 
     <!-- ──────────────────────────── SEARCH ────────────────────────────────── -->
     <div id="tab-search" class="tab-panel" style="display:none">
+      <!-- Scan: the reliable, fast discovery path -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="section-title">📡 Scan ATS Portals <span style="color:var(--green);font-size:10px">RECOMMENDED</span></div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;line-height:1.6">
+          Hits the Greenhouse / Ashby / Lever APIs of the companies in <code>portals.yml</code> directly.
+          Fast, no browser window, no rate-limit games — this is the discovery path that actually works.
+          New jobs land in the <strong>Jobs</strong> tab.
+        </div>
+        <div class="btn-group">
+          <button class="btn primary" onclick="runOp('scan','search-sse')">📡 Scan Portals Now</button>
+          <button class="btn sm" onclick="switchTab('settings')">⚙️ Edit tracked companies</button>
+        </div>
+      </div>
       <div class="grid-2">
         <div class="card">
-          <div class="section-title">Search Configuration</div>
+          <div class="section-title">🔍 Job-Board Search <span style="color:var(--yellow);font-size:10px">BEST-EFFORT</span></div>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;line-height:1.6">
+            Scrapes public job boards in a real browser window (these sites block bots, so it
+            can't run hidden). Slower and often blocked — use Scan above first; reach for this
+            only to cover boards Scan doesn't.
+          </div>
           <div class="field">
             <span class="label">Boards</span>
             <div class="toggle-wrap"><input type="checkbox" id="board-indeed" checked><label for="board-indeed">Indeed</label></div>
             <div class="toggle-wrap"><input type="checkbox" id="board-linkedin" checked><label for="board-linkedin">LinkedIn</label></div>
             <div class="toggle-wrap"><input type="checkbox" id="board-glassdoor" checked><label for="board-glassdoor">Glassdoor</label></div>
             <div class="toggle-wrap"><input type="checkbox" id="board-zip" checked><label for="board-zip">ZipRecruiter</label></div>
-            <div class="toggle-wrap"><input type="checkbox" id="board-careerbuilder"><label for="board-careerbuilder">CareerBuilder</label></div>
-            <div class="toggle-wrap"><input type="checkbox" id="board-monster"><label for="board-monster">Monster</label></div>
-            <div class="toggle-wrap"><input type="checkbox" id="board-weworkremotely"><label for="board-weworkremotely">We Work Remotely</label></div>
-            <div class="toggle-wrap"><input type="checkbox" id="board-flexjobs"><label for="board-flexjobs">FlexJobs <span style="font-size:10px;color:var(--text-muted)">(login wall)</span></label></div>
-            <div class="toggle-wrap"><input type="checkbox" id="board-wellfound"><label for="board-wellfound">Wellfound</label></div>
-            <div class="toggle-wrap"><input type="checkbox" id="board-handshake"><label for="board-handshake">Handshake <span style="font-size:10px;color:var(--text-muted)">(opens browser)</span></label></div>
-            <div class="toggle-wrap"><input type="checkbox" id="board-builtindfw"><label for="board-builtindfw">Built In DFW</label></div>
-            <div class="toggle-wrap"><input type="checkbox" id="board-dfwjobs"><label for="board-dfwjobs">DFW Jobs</label></div>
           </div>
           <div class="field">
             <span class="label">Role Type Preset <span style="color:var(--text-muted);font-size:10px">(base filter — add extras below)</span></span>
@@ -1399,8 +1419,49 @@ function clearJobFilters() {
   renderJobs();
 }
 
+// Click a column header to sort; click again to reverse.
+function sortJobsBy(col) {
+  if (S.jobSortCol === col) {
+    S.jobSortDir = -(S.jobSortDir || 1);
+  } else {
+    S.jobSortCol = col;
+    // Numeric columns default to high→low (most useful for Match/Rating/Salary).
+    S.jobSortDir = (col === 'match' || col === 'rating' || col === 'salary' || col === 'age') ? -1 : 1;
+  }
+  renderJobs();
+}
+
+function jobSortValue(j, col) {
+  const intel = S.intel[slugify(j.company)] || {};
+  switch (col) {
+    case 'age':     return j.first_seen || '';
+    case 'source':  return (j.source || '').toLowerCase();
+    case 'company': return (j.company || '').toLowerCase();
+    case 'role':    return (j.title || '').toLowerCase();
+    case 'rating':  return intel.glassdoor_rating || 0;
+    case 'salary':  return intel.salary_median || 0;
+    case 'match':   return parseFloat(j.score) || 0;
+    case 'status':  return (j.user_status || 'unreviewed').toLowerCase();
+    default:        return '';
+  }
+}
+
 function renderJobs() {
-  const jobs = filteredJobs();
+  let jobs = filteredJobs();
+  if (S.jobSortCol) {
+    const dir = S.jobSortDir || 1;
+    jobs = [...jobs].sort((a, b) => {
+      const va = jobSortValue(a, S.jobSortCol), vb = jobSortValue(b, S.jobSortCol);
+      if (va < vb) return -dir;
+      if (va > vb) return dir;
+      return 0;
+    });
+  }
+  // Update the sort-direction arrows in the header.
+  document.querySelectorAll('#tab-jobs .sort-ind').forEach(el => {
+    el.textContent = (el.dataset.col === S.jobSortCol)
+      ? (S.jobSortDir === 1 ? ' ▲' : ' ▼') : '';
+  });
   document.getElementById('job-count').textContent = jobs.length + ' jobs';
   const tbody = document.getElementById('jobs-tbody');
   const empty = document.getElementById('jobs-empty');
@@ -1733,7 +1794,7 @@ function renderSettings() {
 // a new one to prevent EventSource leaks on re-runs.
 const _activeSSE = {};
 
-function runSSE(url, panelId, triggerBtn) {
+function runSSE(url, panelId, triggerBtn, onDone) {
   // FIX: close any existing stream on this panel.
   if (_activeSSE[panelId]) {
     _activeSSE[panelId].close();
@@ -1764,6 +1825,7 @@ function runSSE(url, panelId, triggerBtn) {
       d.textContent = '✓ Done';
       panel.appendChild(d);
       panel.scrollTop = panel.scrollHeight;
+      if (typeof onDone === 'function') onDone();
       // Refresh data after ops
       loadStats().then(renderOverview);
       return;
@@ -1788,10 +1850,12 @@ function runSSE(url, panelId, triggerBtn) {
   };
 }
 
-function runOp(op) {
-  const panelId = 'overview-sse';
-  if (op === 'scan') runSSE('/api/scan/run', panelId);
-  else if (op === 'search') runSSE('/api/search/run', panelId);
+function runOp(op, panelId) {
+  panelId = panelId || 'overview-sse';
+  // After discovery finishes, refresh the Jobs list so new results show up.
+  const refreshJobs = () => { loadJobs().then(renderJobs); showToast('Jobs refreshed'); };
+  if (op === 'scan') runSSE('/api/scan/run', panelId, null, refreshJobs);
+  else if (op === 'search') runSSE('/api/search/run', panelId, null, refreshJobs);
   else if (op === 'enrich') runSSE('/api/enrich/all', panelId);
 }
 
@@ -1876,14 +1940,6 @@ function runSearch() {
   if (document.getElementById('board-linkedin')?.checked)       boards.push('linkedin');
   if (document.getElementById('board-glassdoor')?.checked)      boards.push('glassdoor');
   if (document.getElementById('board-zip')?.checked)            boards.push('ziprecruiter');
-  if (document.getElementById('board-careerbuilder')?.checked)  boards.push('careerbuilder');
-  if (document.getElementById('board-monster')?.checked)        boards.push('monster');
-  if (document.getElementById('board-weworkremotely')?.checked) boards.push('weworkremotely');
-  if (document.getElementById('board-flexjobs')?.checked)       boards.push('flexjobs');
-  if (document.getElementById('board-wellfound')?.checked)      boards.push('wellfound');
-  if (document.getElementById('board-handshake')?.checked)      boards.push('handshake');
-  if (document.getElementById('board-builtindfw')?.checked)     boards.push('builtindfw');
-  if (document.getElementById('board-dfwjobs')?.checked)        boards.push('dfwjobs');
   const limit = document.getElementById('search-limit')?.value || '25';
   const extraPos = (document.getElementById('extra-positive-kw')?.value || '').trim();
   const extraNeg = (document.getElementById('extra-negative-kw')?.value || '').trim();
@@ -1892,7 +1948,7 @@ function runSearch() {
   if (extraNeg) url += `&extra_negative=${encodeURIComponent(extraNeg)}`;
   const q = document.getElementById('search-queries')?.value.trim();
   if (q) url += `&query=${encodeURIComponent(q.split('\n')[0])}`;
-  runSSE(url, 'search-sse');
+  runSSE(url, 'search-sse', null, () => { loadJobs().then(renderJobs); showToast('Jobs refreshed'); });
 }
 
 function runAutoApply() { runSSE('/api/apply/auto', 'apply-config-sse'); }
