@@ -1964,7 +1964,8 @@ function jobApply(encodedUrl) {
 }
 
 function customizeCVForJob(encodedUrl) {
-  runSSE('/api/cv/customize?url=' + encodedUrl, 'jobs-sse');
+  runSSE('/api/cv/customize?url=' + encodedUrl, 'jobs-sse', null,
+    () => showToast('Tailored CV saved to output/ — see the Resume tab'));
 }
 
 // Legacy overview-tab versions (used by overview Quick Actions)
@@ -2357,9 +2358,23 @@ async function saveApplyConfig() {
 
 // ─── RESUME TAB ───────────────────────────────────────────────────────────────
 function customizeCV() {
-  const jobUrl = document.getElementById('cv-job-url')?.value;
-  if (!jobUrl) { alert('Enter a job URL first'); return; }
-  runSSE('/api/cv/customize?url=' + encodeURIComponent(jobUrl), 'cv-sse');
+  const jobUrl  = document.getElementById('cv-job-url')?.value.trim();
+  const company = document.getElementById('cv-company')?.value.trim();
+  const role    = document.getElementById('cv-role')?.value.trim();
+  let url;
+  if (jobUrl) {
+    url = '/api/cv/customize?url=' + encodeURIComponent(jobUrl);
+  } else if (company) {
+    url = '/api/cv/customize?company=' + encodeURIComponent(company) +
+          '&role=' + encodeURIComponent(role || '');
+  } else {
+    alert('Enter a job URL, or a company and role.');
+    return;
+  }
+  runSSE(url, 'cv-sse', null, () => {
+    loadDocuments();
+    showToast('Tailored CV added to Documents');
+  });
 }
 
 async function generateCoverLetter() {

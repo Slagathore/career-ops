@@ -26,6 +26,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { resolve, join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { createInterface } from 'readline';
+import { spawnSync } from 'child_process';
 import { chromium } from 'playwright';
 import { URL as NodeURL } from 'url';
 
@@ -557,7 +558,23 @@ async function main() {
   const role    = report?.role    ?? urlRole    ?? 'Unknown Role';
 
   // ── 6. Build FieldAnswers ─────────────────────────────────────────────
-  const fieldAnswers = buildFieldAnswers(profile, report ?? { sections: {}, company, role });
+  let fieldAnswers = buildFieldAnswers(profile, report ?? { sections: {}, company, role });
+
+  // No tailored resume PDF yet — generate one for this job before filling.
+  if (!fieldAnswers.resumePath) {
+    log(`${prefix} No resume PDF in output/ — generating a tailored CV for this job...`);
+    const gen = spawnSync('node', ['customize-cv.mjs', '--url', opts.url], {
+      cwd: ROOT_DIR,
+      stdio: 'inherit',
+    });
+    if (gen.status === 0) {
+      // Re-resolve field answers so the freshly generated PDF is picked up.
+      fieldAnswers = buildFieldAnswers(profile, report ?? { sections: {}, company, role });
+    } else {
+      console.warn(`${prefix} ⚠️  CV generation failed — resume upload will be skipped.`);
+    }
+  }
+
   log(`${prefix} Field answers built:`);
   log(`  Name:    ${fieldAnswers.firstName} ${fieldAnswers.lastName}`);
   log(`  Email:   ${fieldAnswers.email}`);
@@ -565,8 +582,7 @@ async function main() {
   log(`  Cover:   ${fieldAnswers.coverLetter ? `${fieldAnswers.coverLetter.length} chars` : '(none)'}`);
 
   if (!fieldAnswers.resumePath) {
-    console.warn(`${prefix} ⚠️  No PDF found in output/ — resume upload will be skipped.`);
-    console.warn(`   Run node generate-pdf.mjs first to generate a tailored resume.`);
+    console.warn(`${prefix} ⚠️  No resume PDF available — resume upload will be skipped.`);
   }
 
   // ── 7. Launch Playwright (persistent profile per domain) ─────────────

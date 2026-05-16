@@ -1287,12 +1287,20 @@ func main() {
 
 	// ── CV endpoints ───────────────────────────────────────────────────────────
 	mux.HandleFunc("/api/cv/customize", func(w http.ResponseWriter, r *http.Request) {
-		jobURL := r.URL.Query().Get("url")
-		if jobURL == "" {
-			http.Error(w, "missing url", 400)
+		args := []string{"customize-cv.mjs"}
+		if jobURL := r.URL.Query().Get("url"); jobURL != "" {
+			args = append(args, "--url", jobURL)
+		}
+		if company := r.URL.Query().Get("company"); company != "" {
+			args = append(args, "--company", company)
+		}
+		if role := r.URL.Query().Get("role"); role != "" {
+			args = append(args, "--role", role)
+		}
+		if len(args) == 1 {
+			http.Error(w, "missing url or company", 400)
 			return
 		}
-		args := []string{"apply-engine/index.mjs", "--url", jobURL, "--dry-run", "--cv-only"}
 		cmd := exec.Command("node", args...)
 		cmd.Dir = rootPath
 		sseRun(w, r, cmd)
