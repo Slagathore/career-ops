@@ -46,6 +46,14 @@ const COMPANY_ARG = arg('--company');
 const ROLE_ARG    = arg('--role');
 const MODEL_ARG   = arg('--model');
 
+// Cover letter: --cover-letter also writes one; --cover-letter-only skips the CV.
+const CL_ONLY     = args.includes('--cover-letter-only');
+const WANT_CL     = CL_ONLY || args.includes('--cover-letter');
+const CL_TONE     = arg('--cl-tone')   || 'professional';
+const CL_LENGTH   = arg('--cl-length') || 'medium';
+const CL_NOTES    = arg('--cl-notes')  || '';
+const CL_WORDS    = { short: 150, medium: 300, long: 500 };
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function slugify(s) {
@@ -84,19 +92,27 @@ async function fetchJobText(url) {
   }
 }
 
-/** Call the model via Ollama, forcing JSON output. */
-async function callModel(model, prompt) {
+/**
+ * Call the model via Ollama. With json=true (default) JSON output is forced
+ * and parsed; with json=false the raw text is returned (used for cover letters).
+ */
+async function callModel(model, prompt, json = true) {
+  const body = {
+    model, stream: false,
+    messages: [{ role: 'user', content: prompt }],
+  };
+  if (json) body.format = 'json';
+
   const res = await fetch(OLLAMA_CHAT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model, stream: false, format: 'json',
-      messages: [{ role: 'user', content: prompt }],
-    }),
+    body: JSON.stringify(body),
     signal: AbortSignal.timeout(180_000),
   });
   if (!res.ok) throw new Error(`Ollama HTTP ${res.status}: ${await res.text()}`);
   const content = (await res.json())?.message?.content ?? '';
+
+  if (!json) return content.trim();
   try {
     return JSON.parse(content);
   } catch {
@@ -149,6 +165,32 @@ Return ONLY a JSON object in exactly this shape (no markdown, no commentary):
   ]
 }
 Preserve all real roles from the CV. Order experience newest-first.`;
+}
+
+function buildCoverLetterPrompt(cv, company, role, jdText, tone, length, notes) {
+  const words = CL_WORDS[length] || 300;
+  return `Write a cover letter for the candidate below applying to this job.
+
+CANDIDATE CV (markdown):
+${cv}
+
+TARGET JOB:
+Company: ${company}
+Role: ${role}
+Description:
+${jdText || '(no description available — write from the role title)'}
+
+REQUIREMENTS:
+- Tone: ${tone}
+- Length: approximately ${words} words
+${notes ? `- Use the following as context — the candidate wants these points
+  emphasized or worked into the letter (interpret them sensibly):
+${notes}` : '- No extra emphasis points were provided.'}
+
+Write a complete, ready-to-send cover letter. Open with "Dear Hiring Manager"
+unless a specific name is evident. Keep every claim truthful to the CV and the
+notes above — do not invent experience. Return ONLY the letter text: no
+preamble, no markdown, no JSON.`;
 }
 
 // ── HTML fragment builders ───────────────────────────────────────────────────
@@ -276,42 +318,66 @@ async function main() {
       if (m) company = m[1].replace(/-/g, ' ');
     }
   }
-  console.log(`Tailoring CV → ${company} / ${role}`);
   console.log(`Model: ${model}`);
-
-  // ── Tailor via the model ────────────────────────────────────────────────
-  let tailored;
-  try {
-    tailored = await callModel(model, buildPrompt(cv, company, role, jdText));
-  } catch (err) {
-    console.error(`Tailoring failed: ${err.message}`);
-    process.exit(1);
-  }
-  if (!tailored.summary || !Array.isArray(tailored.experience)) {
-    console.error('Model response missing required fields (summary / experience).');
-    process.exit(1);
-  }
-
-  // ── Fill template + write HTML ──────────────────────────────────────────
   mkdirSync(OUTPUT_DIR, { recursive: true });
-  const template = readFileSync(TEMPLATE_PATH, 'utf-8');
-  const html     = fillTemplate(template, cand, tailored);
+  const slug = slugify(company) || 'job';
+  const date = new Date().toISOString().slice(0, 10);
 
-  const slug     = slugify(company) || 'job';
-  const date     = new Date().toISOString().slice(0, 10);
-  const htmlPath = `${OUTPUT_DIR}/cv-${slug}-${date}.html`;
-  const pdfPath  = `${OUTPUT_DIR}/cv-${slug}-${date}.pdf`;
-  writeFileSync(htmlPath, html, 'utf-8');
-  console.log(`✓ HTML written: ${htmlPath}`);
+  // ── Tailored CV (skipped in --cover-letter-only mode) ───────────────────
+  if (!CL_ONLY) {
+    console.log(`Tailoring CV → ${company} / ${role}`);
+    let tailored;
+    try {
+      tailored = await callModel(model, buildPrompt(cv, company, role, jdText));
+    } catch (err) {
+      console.error(`Tailoring failed: ${err.message}`);
+      process.exit(1);
+    }
+    if (!tailored.summary || !Array.isArray(tailored.experience)) {
+      console.error('Model response missing required fields (summary / experience).');
+      process.exit(1);
+    }
 
-  // ── Render PDF via generate-pdf.mjs ─────────────────────────────────────
-  const r = spawnSync('node', ['generate-pdf.mjs', htmlPath, pdfPath, '--format=letter'],
-    { stdio: 'inherit' });
-  if (r.status === 0 && existsSync(pdfPath)) {
-    console.log(`\n✓ Tailored CV ready: ${pdfPath}`);
-  } else {
-    console.error(`\n⚠️  PDF render failed — the HTML is still available at ${htmlPath}`);
-    process.exit(1);
+    const template = readFileSync(TEMPLATE_PATH, 'utf-8');
+    const html     = fillTemplate(template, cand, tailored);
+    const htmlPath = `${OUTPUT_DIR}/cv-${slug}-${date}.html`;
+    const pdfPath  = `${OUTPUT_DIR}/cv-${slug}-${date}.pdf`;
+    writeFileSync(htmlPath, html, 'utf-8');
+    console.log(`✓ HTML written: ${htmlPath}`);
+
+    const r = spawnSync('node', ['generate-pdf.mjs', htmlPath, pdfPath, '--format=letter'],
+      { stdio: 'inherit' });
+    if (r.status === 0 && existsSync(pdfPath)) {
+      console.log(`✓ Tailored CV ready: ${pdfPath}`);
+    } else {
+      console.error(`⚠️  PDF render failed — the HTML is still available at ${htmlPath}`);
+      process.exit(1);
+    }
+  }
+
+  // ── Cover letter ────────────────────────────────────────────────────────
+  if (WANT_CL) {
+    console.log(`Writing cover letter → ${company} / ${role} (${CL_TONE}, ${CL_LENGTH})`);
+    let letter;
+    try {
+      letter = await callModel(
+        model,
+        buildCoverLetterPrompt(cv, company, role, jdText, CL_TONE, CL_LENGTH, CL_NOTES),
+        false,
+      );
+    } catch (err) {
+      console.error(`Cover letter failed: ${err.message}`);
+      process.exit(1);
+    }
+    const clPath = `${OUTPUT_DIR}/cover-letter-${slug}-${date}.md`;
+    writeFileSync(clPath, letter, 'utf-8');
+    console.log(`✓ Cover letter ready: ${clPath}`);
+
+    // Markers let the webui capture the letter text from stdout for the
+    // inline editor, without guessing the filename.
+    console.log('===COVER_LETTER_START===');
+    console.log(letter);
+    console.log('===COVER_LETTER_END===');
   }
 }
 

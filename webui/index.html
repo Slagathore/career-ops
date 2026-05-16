@@ -628,6 +628,15 @@ code{background:var(--surface2);padding:1px 5px;border-radius:3px;font-size:12px
               <input type="text" id="cv-role" placeholder="Solutions Engineer">
             </div>
           </div>
+          <div class="field">
+            <span class="label">Cover letter</span>
+            <div class="toggle-wrap"><input type="radio" name="cl-mode" id="cl-mode-yes" value="yes"><label for="cl-mode-yes">Yes — also write a cover letter</label></div>
+            <div class="toggle-wrap"><input type="radio" name="cl-mode" id="cl-mode-no" value="no"><label for="cl-mode-no">No — CV only</label></div>
+            <div class="toggle-wrap"><input type="radio" name="cl-mode" id="cl-mode-ask" value="ask" checked><label for="cl-mode-ask">Ask me each time</label></div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:4px">
+              Cover letters use the tone, length &amp; key points from the Cover Letter card →
+            </div>
+          </div>
           <div class="btn-group">
             <button class="btn primary" onclick="customizeCV()">📄 Customize CV</button>
           </div>
@@ -2371,22 +2380,45 @@ function customizeCV() {
     alert('Enter a job URL, or a company and role.');
     return;
   }
+
+  // Cover letter: yes / no / ask-me-each-time.
+  const mode = document.querySelector('input[name="cl-mode"]:checked')?.value || 'ask';
+  let wantCL = mode === 'yes';
+  if (mode === 'ask') wantCL = confirm('Also generate a cover letter for this job?');
+  if (wantCL) {
+    const tone   = document.getElementById('cl-tone')?.value || 'professional';
+    const length = document.getElementById('cl-length')?.value || 'medium';
+    const notes  = document.getElementById('cl-points')?.value.trim() || '';
+    url += '&cover_letter=yes&cl_tone=' + encodeURIComponent(tone) +
+           '&cl_length=' + encodeURIComponent(length);
+    if (notes) url += '&cl_notes=' + encodeURIComponent(notes);
+  }
+
   runSSE(url, 'cv-sse', null, () => {
     loadDocuments();
-    showToast('Tailored CV added to Documents');
+    showToast(wantCL ? 'CV + cover letter added to Documents' : 'Tailored CV added to Documents');
   });
 }
 
 async function generateCoverLetter() {
-  const company = document.getElementById('cv-company')?.value || '';
-  const role = document.getElementById('cv-role')?.value || '';
-  const tone = document.getElementById('cl-tone')?.value || 'professional';
-  const length = document.getElementById('cl-length')?.value || 'medium';
+  const company = document.getElementById('cv-company')?.value.trim() || '';
+  const role    = document.getElementById('cv-role')?.value.trim() || '';
+  const url     = document.getElementById('cv-job-url')?.value.trim() || '';
+  const tone    = document.getElementById('cl-tone')?.value || 'professional';
+  const length  = document.getElementById('cl-length')?.value || 'medium';
+  const notes   = document.getElementById('cl-points')?.value.trim() || '';
+  if (!company && !url) { alert('Enter a company name, or a job URL, first.'); return; }
+  showToast('Generating cover letter — this takes ~20–30s…');
   try {
-    const result = await api('/api/cv/cover-letter', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({company,role,tone,length})});
+    const result = await api('/api/cv/cover-letter', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ company, role, url, tone, length, notes }),
+    });
     document.getElementById('cl-text').value = result.letter || '';
     document.getElementById('cl-output').style.display = '';
-  } catch(e) { console.error(e); }
+    showToast('Cover letter ready');
+  } catch(e) { showToast('Error: ' + e.message); console.error(e); }
 }
 
 async function saveCoverLetter() {

@@ -1286,6 +1286,24 @@ func main() {
 	})
 
 	// ── CV endpoints ───────────────────────────────────────────────────────────
+	// addCoverLetterFlags appends --cover-letter* args from query params.
+	addCoverLetterFlags := func(args []string, r *http.Request) []string {
+		if r.URL.Query().Get("cover_letter") != "yes" {
+			return args
+		}
+		args = append(args, "--cover-letter")
+		if t := r.URL.Query().Get("cl_tone"); t != "" {
+			args = append(args, "--cl-tone", t)
+		}
+		if l := r.URL.Query().Get("cl_length"); l != "" {
+			args = append(args, "--cl-length", l)
+		}
+		if n := r.URL.Query().Get("cl_notes"); n != "" {
+			args = append(args, "--cl-notes", n)
+		}
+		return args
+	}
+
 	mux.HandleFunc("/api/cv/customize", func(w http.ResponseWriter, r *http.Request) {
 		args := []string{"customize-cv.mjs"}
 		if jobURL := r.URL.Query().Get("url"); jobURL != "" {
@@ -1301,13 +1319,20 @@ func main() {
 			http.Error(w, "missing url or company", 400)
 			return
 		}
+		args = addCoverLetterFlags(args, r)
 		cmd := exec.Command("node", args...)
 		cmd.Dir = rootPath
 		sseRun(w, r, cmd)
 	})
 
+	// POST /api/cv/cover-letter — generate a cover letter via the model.
+	// Body: {company, role, url, tone, length, notes}. Runs customize-cv.mjs in
+	// cover-letter-only mode and returns the letter text for the inline editor.
 	mux.HandleFunc("/api/cv/cover-letter", func(w http.ResponseWriter, r *http.Request) {
 		cors(w)
+		if r.Method == http.MethodOptions {
+			return
+		}
 		if r.Method != http.MethodPost {
 			http.Error(w, "POST only", 405)
 			return
@@ -1315,33 +1340,56 @@ func main() {
 		var req struct {
 			Company string `json:"company"`
 			Role    string `json:"role"`
+			URL     string `json:"url"`
 			Tone    string `json:"tone"`
 			Length  string `json:"length"`
+			Notes   string `json:"notes"`
 		}
-		// FIX: check decode error.
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, "invalid JSON: "+err.Error(), 400)
 			return
 		}
-		// Generate a basic cover letter from profile data
-		name := "Cole Chambers"
-		if profile != nil {
-			if cand, ok := profile["candidate"].(map[string]interface{}); ok {
-				if n, ok := cand["full_name"].(string); ok {
-					name = n
-				}
+		if req.Company == "" && req.URL == "" {
+			http.Error(w, "company or url required", 400)
+			return
+		}
+
+		args := []string{"customize-cv.mjs", "--cover-letter-only"}
+		if req.URL != "" {
+			args = append(args, "--url", req.URL)
+		}
+		if req.Company != "" {
+			args = append(args, "--company", req.Company)
+		}
+		if req.Role != "" {
+			args = append(args, "--role", req.Role)
+		}
+		if req.Tone != "" {
+			args = append(args, "--cl-tone", req.Tone)
+		}
+		if req.Length != "" {
+			args = append(args, "--cl-length", req.Length)
+		}
+		if req.Notes != "" {
+			args = append(args, "--cl-notes", req.Notes)
+		}
+
+		cmd := exec.Command("node", args...)
+		cmd.Dir = rootPath
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			http.Error(w, "cover letter generation failed: "+err.Error()+"\n"+string(out), 500)
+			return
+		}
+		// Extract the letter from between the markers customize-cv.mjs prints.
+		text := string(out)
+		letter := text
+		if i := strings.Index(text, "===COVER_LETTER_START==="); i != -1 {
+			rest := text[i+len("===COVER_LETTER_START==="):]
+			if j := strings.Index(rest, "===COVER_LETTER_END==="); j != -1 {
+				letter = strings.TrimSpace(rest[:j])
 			}
 		}
-		letter := fmt.Sprintf(`Dear Hiring Manager,
-
-I am writing to express my strong interest in the %s position at %s. As an M.S. Chemist, self-taught software developer, and AI/ML practitioner with a $10M account management track record, I bring a rare combination of scientific credibility, technical depth, and client relationship expertise.
-
-My background spans analytical instrumentation (LC-MS, GC-MS, HPLC, NMR), two years of RLHF work at Outlier AI as a Chemistry SME, and hands-on software development in Rust, Python, TypeScript, and Node.js. This T-shaped profile is what makes me uniquely positioned for roles that sit at the intersection of technical knowledge and client-facing work.
-
-I would welcome the opportunity to discuss how my background aligns with your team's needs.
-
-Sincerely,
-%s`, req.Role, req.Company, name)
 		jsonOK(w, map[string]string{"letter": letter})
 	})
 
